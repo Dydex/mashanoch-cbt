@@ -1,0 +1,92 @@
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------
+   Design tokens. Light is the base; dark overrides only the values
+   that change, so nothing can be defined in one theme and missing in
+   the other.
+   --------------------------------------------------------------- */
+
+:root {
+  --bg: #f4f6fb;
+  --surface: #ffffff;
+  --surface-2: #f1f3f6;
+  --border: #e3e6ec;
+  --border-strong: #d2d7e0;
+
+  --text: #10131a;
+  --text-muted: #646c7e;
+  --text-subtle: #8b93a5;
+
+  --primary: #4f46e5;
+  --primary-hover: #4338ca;
+  --primary-soft: #eef2ff;
+  --primary-fg: #ffffff;
+
+  --success: #12855c;
+  --success-soft: #e2f5ed;
+  --warning: #9a6413;
+  --warning-soft: #fdf1dc;
+  --danger: #b4231f;
+  --danger-soft: #fdeaea;
+
+  --ring: rgba(91, 88, 214, 0.28);
+  --shadow: 0 1px 2px rgba(16, 19, 26, 0.05), 0 4px 16px rgba(16, 19, 26, 0.06);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0c0e13;
+    --surface: #14171e;
+    --surface-2: #1a1e27;
+    --border: #262b36;
+    --border-strong: #333947;
+
+    --text: #e9ecf2;
+    --text-muted: #98a0b0;
+    --text-subtle: #6f7787;
+
+    --primary: #7d7aec;
+    --primary-hover: #8f8cf5;
+    --primary-soft: #21203a;
+    --primary-fg: #0c0e13;
+
+    --success: #3ecf96;
+    --success-soft: #10281f;
+    --warning: #e0a758;
+    --warning-soft: #2a1f10;
+    --danger: #f0736e;
+    --danger-soft: #2c1414;
+
+    --ring: rgba(125, 122, 236, 0.36);
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 28px rgba(0, 0, 0, 0.32);
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-text: var(--text);
+  --color-muted: var(--text-muted);
+  --color-primary: var(--primary);
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  background-image: radial-gradient(rgba(79,70,229,.07) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+::selection { background: var(--primary); color: white; }
+
+button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
+
+/* Consistent keyboard focus everywhere, without the default halo. */
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
