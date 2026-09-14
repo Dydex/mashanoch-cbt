@@ -34,9 +34,10 @@ export default async function ExamHome() {
 
   const tests = (testRows ?? []) as unknown as OpenTest[];
 
+  // Status only: students are not shown their scores.
   const { data: submissions } = await supabase
     .from("submissions")
-    .select("test_id, status, score, total_questions");
+    .select("test_id, status");
 
   const byTest = new Map(
     (submissions ?? []).map((s) => [s.test_id as string, s]),
@@ -113,15 +114,6 @@ export default async function ExamHome() {
                       Closes {timeFmt.format(new Date(t.end_time))}
                     </p>
                   </div>
-
-                  {done && sub?.score != null && (
-                    <div className="shrink-0 text-right">
-                      <p className="text-lg font-semibold">{sub.score}</p>
-                      <p className="text-[11px] text-[var(--text-subtle)]">
-                        marks
-                      </p>
-                    </div>
-                  )}
 
                   <span className="shrink-0 text-[var(--text-subtle)] transition group-hover:text-[var(--text)]">
                     <IconChevron />

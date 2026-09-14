@@ -36,7 +36,7 @@ export default async function ExamPage({
 
   const { data: submission } = await supabase
     .from("submissions")
-    .select("id, started_at, status, score, total_questions")
+    .select("id, started_at, status")
     .eq("id", submissionId)
     .single();
 
@@ -45,8 +45,8 @@ export default async function ExamPage({
     : (test.subjects as { name: string } | null)?.name;
 
   /* ---------- already handed in ---------- */
+  // Students are not shown their score; their teacher shares results.
   if (submission?.status === "submitted") {
-    const total = (submission.total_questions ?? 0) * test.marks_per_question;
     return (
       <div className="mx-auto max-w-lg pt-10">
         <Card className="p-8 text-center">
@@ -73,16 +73,9 @@ export default async function ExamPage({
             {test.title} · {subject}
           </p>
 
-          <div className="mt-6 rounded-xl bg-[var(--surface-2)] p-5">
-            <p className="text-3xl font-semibold tracking-tight">
-              {submission.score ?? 0}
-              <span className="text-lg text-[var(--text-subtle)]"> / {total}</span>
-            </p>
-            <p className="mt-1 text-xs text-[var(--text-muted)]">
-              {submission.total_questions ?? 0} questions ·{" "}
-              {test.marks_per_question} marks each
-            </p>
-          </div>
+          <p className="mt-6 rounded-xl bg-[var(--surface-2)] p-5 text-sm text-[var(--text-muted)]">
+            Your answers have been saved. Your teacher will share your results.
+          </p>
 
           <Link
             href="/exam"
