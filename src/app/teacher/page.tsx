@@ -28,7 +28,6 @@ type TestRow = {
   approval_status: ApprovalStatus;
   subjects: { name: string } | { name: string }[] | null;
   questions: { count: number }[];
-  submissions: { count: number }[];
 };
 
 export default async function TeacherHome() {
@@ -37,24 +36,48 @@ export default async function TeacherHome() {
   const isAdmin = profile.role === "admin";
   const supabase = await createClient();
 
-  // Counts come back with the rows, so the page is a single round trip.
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("test")
     .select(
       "id, title, class, term, session, duration_minutes, marks_per_question," +
-        " start_time, end_time, approval_status," +
-        " subjects(name), questions(count), submissions(count)",
+        " start_time, end_time, approval_status, subjects(name), questions(count)",
     )
     .order("created_at", { ascending: false });
 
+  // Submission counts come from a query that reads test_id alone. Embedding
+  // submissions(count) above needs read access to every column of
+  // submissions, and signed-in users cannot read score (0012), so that embed
+  // failed the whole list.
+  const { data: submissionRows, error: submissionsError } = await supabase
+    .from("submissions")
+    .select("test_id");
+
+  // A failed query must not pass for an empty list: say so, and log why.
+  // Fields spelled out: the error object itself logs as "{}".
+  for (const [what, e] of [
+    ["Tests list", error],
+    ["Submission counts", submissionsError],
+  ] as const) {
+    if (e)
+      console.error(
+        `${what} query failed: ${e.code} ${e.message}` +
+          (e.details ? ` | ${e.details}` : "") +
+          (e.hint ? ` | hint: ${e.hint}` : ""),
+      );
+  }
+
   const tests = (data ?? []) as unknown as TestRow[];
+
+  const submissionsByTest = new Map<string, number>();
+  for (const s of submissionRows ?? [])
+    submissionsByTest.set(s.test_id, (submissionsByTest.get(s.test_id) ?? 0) + 1);
 
   const totalQuestions = tests.reduce(
     (n, t) => n + (t.questions[0]?.count ?? 0),
     0,
   );
   const totalSubmissions = tests.reduce(
-    (n, t) => n + (t.submissions[0]?.count ?? 0),
+    (n, t) => n + (submissionsByTest.get(t.id) ?? 0),
     0,
   );
   const liveCount = tests.filter(isLive).length;
@@ -128,7 +151,16 @@ export default async function TeacherHome() {
           )}
         </div>
 
-        {tests.length === 0 ? (
+        {error ? (
+          <Card className="px-6 py-10 text-center">
+            <h3 className="text-sm font-semibold text-[var(--danger)]">
+              Your tests could not be loaded
+            </h3>
+            <p className="mx-auto mt-1 max-w-md text-sm text-[var(--text-muted)]">
+              {error.message}
+            </p>
+          </Card>
+        ) : tests.length === 0 ? (
           <Card className="px-6 py-14 text-center">
             <span
               aria-hidden
@@ -163,7 +195,7 @@ export default async function TeacherHome() {
                 ? t.subjects[0]?.name
                 : t.subjects?.name;
               const questions = t.questions[0]?.count ?? 0;
-              const submissions = t.submissions[0]?.count ?? 0;
+              const submissions = submissionsByTest.get(t.id) ?? 0;
 
               return (
                 <li key={t.id}>
