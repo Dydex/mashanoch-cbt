@@ -9,15 +9,16 @@ export default function StaffAuthLayout({
       label="Staff Portal"
       sublabel="Teachers & administrators"
       footer={
-        <p className="mt-5 text-center text-sm text-white/50">
-          Student?{" "}
+        <div className="mt-5 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-center text-sm shadow-[var(--shadow)]">
+          <span className="text-[var(--text-muted)]">Student? </span>
           <Link
             href="/login"
-            className="font-medium text-white/85 underline underline-offset-2 hover:text-white"
+            className="font-semibold text-[var(--primary)] underline underline-offset-2
+                       hover:text-[var(--primary-hover)]"
           >
-            Sign in with your admission number and password
+            Sign in here
           </Link>
-        </p>
+        </div>
       }
     >
       {children}

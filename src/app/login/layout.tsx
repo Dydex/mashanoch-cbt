@@ -9,17 +9,21 @@ export default function StudentAuthLayout({
       label="Student Portal"
       sublabel="Computer-Based Testing"
       footer={
-        // A text link, not a button: almost everyone here is a student, and a
-        // second full-width button would compete with the actual sign-in.
-        <p className="mt-5 text-center text-sm text-white/50">
-          Teacher or administrator?{" "}
+        // Dark text on the light panel, and a bordered strip rather than a
+        // line of small print: staff sign in here too, and they were hunting
+        // for it.
+        <div className="mt-5 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-center text-sm shadow-[var(--shadow)]">
+          <span className="text-[var(--text-muted)]">
+            Teacher or administrator?{" "}
+          </span>
           <Link
             href="/staff/login"
-            className="font-medium text-white/85 underline underline-offset-2 hover:text-white"
+            className="font-semibold text-[var(--primary)] underline underline-offset-2
+                       hover:text-[var(--primary-hover)]"
           >
             Sign in here
           </Link>
-        </p>
+        </div>
       }
     >
       {children}
