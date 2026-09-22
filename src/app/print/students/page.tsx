@@ -2,7 +2,7 @@ import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAdmin } from "@/lib/auth";
 import { CLASSES } from "@/lib/constants";
-import PrintButton from "./print-button";
+import PrintButton from "@/components/print-button";
 
 export const metadata = { title: "Student login list" };
 
