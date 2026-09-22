@@ -19,23 +19,25 @@ export default function SetPasswordPage() {
    * If it used the implicit flow the tokens are in the URL fragment, which the
    * server never sees — so pick them up here and establish the session before
    * the password can be changed.
+   *
+   * Both paths finish through the same promise, so `ready` is never set
+   * during the effect itself.
    */
   useEffect(() => {
-    const supabase = createClient();
     const hash = new URLSearchParams(window.location.hash.slice(1));
     const access_token = hash.get("access_token");
     const refresh_token = hash.get("refresh_token");
 
-    if (access_token && refresh_token) {
-      supabase.auth
-        .setSession({ access_token, refresh_token })
-        .finally(() => {
-          history.replaceState(null, "", window.location.pathname);
-          setReady(true);
-        });
-    } else {
-      setReady(true);
-    }
+    const session =
+      access_token && refresh_token
+        ? createClient()
+            .auth.setSession({ access_token, refresh_token })
+            .then(() => {
+              history.replaceState(null, "", window.location.pathname);
+            })
+        : Promise.resolve();
+
+    session.finally(() => setReady(true));
   }, []);
 
   return (
@@ -64,7 +66,9 @@ export default function SetPasswordPage() {
         </div>
 
         {state.error && (
-          <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{state.error}</p>
+          <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+            {state.error}
+          </p>
         )}
 
         <button type="submit" disabled={pending || !ready}
