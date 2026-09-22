@@ -13,6 +13,7 @@ import { timeFmt, toSchoolInput } from "@/lib/time";
 import { updateTest } from "../actions";
 import TestForm from "../test-form";
 import AddQuestionForm from "./add-question-form";
+import DeleteTest from "./delete-test";
 import QuestionCard, { type Option } from "./question-card";
 import ApprovalPanel, { type ReviewEntry } from "./approval-panel";
 import { ReviewForm, SubmitForm } from "./review-forms";
@@ -62,7 +63,7 @@ export default async function AuthorTestPage({
     admin
       .from("questions")
       .select(
-        "id, question_text, order_index, question_options(id, option_text, is_correct)",
+        "id, question_text, image_url, order_index, question_options(id, option_text, is_correct)",
       )
       .eq("test_id", testId)
       .order("order_index"),
@@ -83,19 +84,20 @@ export default async function AuthorTestPage({
     : (test.subjects as { name: string } | null)?.name;
 
   const list = questions ?? [];
+  const sat = submissionCount ?? 0;
   const total = list.length * test.marks_per_question;
   const approval = test.approval_status as ApprovalStatus;
   const status = testStatus(test);
   const own = test.created_by === profile.id;
   const closed = isClosed(test);
 
-  // Once an approved test's window opens the paper is frozen, so questions
-  // cannot change underneath a student mid-exam. Database triggers enforce
-  // this for real (0008, 0010); this only decides what the UI offers.
-  const locked = isLocked(test);
+  // The paper freezes once a student has started: until then even a live test
+  // can still be fixed. Database triggers enforce this for real (0008, 0010,
+  // 0015); this only decides what the UI offers.
+  const locked = isLocked(test, sat);
 
   // Admins review papers and never change them (requireTestOwner refuses
-  // them on every write). The teacher can edit until the test is live.
+  // them on every write).
   const canEdit = !isAdmin && !locked;
 
   const entries: ReviewEntry[] = (reviews ?? []).map((r) => ({
@@ -158,7 +160,7 @@ export default async function AuthorTestPage({
                      transition hover:bg-[var(--primary-hover)]"
         >
           View results
-          {submissionCount ? ` (${submissionCount})` : ""}
+          {sat ? ` (${sat})` : ""}
         </Link>
       </header>
 
@@ -181,12 +183,9 @@ export default async function AuthorTestPage({
           <LockIcon />
           <p>
             <strong className="font-semibold">Questions are locked.</strong>{" "}
-            This test opened on {timeFmt.format(new Date(test.start_time))}, so
-            the paper can no longer be changed
-            {(submissionCount ?? 0) > 0
-              ? ` — ${submissionCount} student${submissionCount === 1 ? " has" : "s have"} already started it.`
-              : "."}{" "}
-            To make changes, create a new test.
+            {sat} student{sat === 1 ? " has" : "s have"} started this test, so
+            the paper can no longer be changed. To make changes, create a new
+            test.
           </p>
         </div>
       )}
@@ -234,11 +233,9 @@ export default async function AuthorTestPage({
         {list.length === 0 ? (
           <Card className="px-6 py-10 text-center">
             <p className="text-sm text-[var(--text-muted)]">
-              {locked
-                ? "This test opened with no questions in it."
-                : canEdit
-                  ? "No questions yet. Add the first one below."
-                  : "No questions yet."}
+              {canEdit
+                ? "No questions yet. Add the first one below."
+                : "No questions yet."}
             </p>
           </Card>
         ) : (
@@ -252,6 +249,7 @@ export default async function AuthorTestPage({
                   question={{
                     id: q.id,
                     question_text: q.question_text,
+                    image_url: q.image_url ?? null,
                     options: q.question_options as Option[],
                   }}
                 />
@@ -281,6 +279,18 @@ export default async function AuthorTestPage({
             canApprove={canApprove}
             canSendBack={canSendBack}
           />
+        </section>
+      )}
+
+      {!isAdmin && own && sat === 0 && (
+        <section className="mt-7 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow)]">
+          <h2 className="text-base font-semibold">Delete</h2>
+          <p className="mt-1 mb-3 text-sm text-[var(--text-muted)]">
+            Nobody has sat this test yet, so it can still be deleted with its
+            questions and approval history. Once a student sits it, it stays as
+            a record of their results.
+          </p>
+          <DeleteTest testId={testId} title={test.title} />
         </section>
       )}
     </div>

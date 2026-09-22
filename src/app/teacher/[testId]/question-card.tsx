@@ -1,7 +1,12 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element -- question pictures come from
+   Supabase Storage and are shown at their own size; next/image would need
+   the bucket's host configured and adds nothing here. */
+
 import { useActionState, useEffect, useState } from "react";
 import { updateQuestion, deleteQuestion, type ActionState } from "../actions";
+import { IMAGE_ACCEPT } from "@/lib/question-image";
 
 export type Option = { id: string; option_text: string; is_correct: boolean };
 
@@ -20,8 +25,13 @@ export default function QuestionCard({
 }: {
   testId: string;
   index: number;
-  question: { id: string; question_text: string; options: Option[] };
-  /** True when the viewer may not change the paper: it is live, or they are an admin reviewing it. */
+  question: {
+    id: string;
+    question_text: string;
+    image_url: string | null;
+    options: Option[];
+  };
+  /** True when the viewer may not change the paper: a student has started it, or they are an admin reviewing it. */
   locked?: boolean;
 }) {
   const [editing, setEditing] = useState(false);
@@ -72,6 +82,14 @@ export default function QuestionCard({
           </div>
           )}
         </div>
+
+        {question.image_url && (
+          <img
+            src={question.image_url}
+            alt=""
+            className="mt-3 max-h-64 rounded-lg border border-[var(--border)]"
+          />
+        )}
 
         <ul className="mt-3 space-y-1.5">
           {question.options.map((o, i) => (
@@ -126,6 +144,46 @@ export default function QuestionCard({
         defaultValue={question.question_text}
         className={`mt-1.5 ${field}`}
       />
+
+      <div className="mt-4">
+        <label
+          htmlFor={`img-${question.id}`}
+          className="text-xs font-semibold text-[var(--text-muted)]"
+        >
+          Picture — optional, up to 2 MB
+        </label>
+        {question.image_url && (
+          <div className="mt-2 flex flex-wrap items-center gap-3">
+            <img
+              src={question.image_url}
+              alt=""
+              className="max-h-24 rounded-lg border border-[var(--border)]"
+            />
+            <label className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
+              <input
+                type="checkbox"
+                name="remove_image"
+                className="h-4 w-4 accent-[var(--primary)]"
+              />
+              Remove this picture
+            </label>
+          </div>
+        )}
+        <input
+          id={`img-${question.id}`}
+          name="image"
+          type="file"
+          accept={IMAGE_ACCEPT}
+          className="mt-2 block w-full text-sm text-[var(--text-muted)]
+                     file:mr-3 file:rounded-lg file:border-0 file:bg-[var(--surface-2)]
+                     file:px-3 file:py-2 file:text-xs file:font-semibold file:text-[var(--text)]"
+        />
+        {question.image_url && (
+          <p className="mt-1 text-[11px] text-[var(--text-subtle)]">
+            Choosing a new picture replaces the one above.
+          </p>
+        )}
+      </div>
 
       <fieldset className="mt-4">
         <legend className="text-xs font-semibold text-[var(--text-muted)]">

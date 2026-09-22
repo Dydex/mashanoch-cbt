@@ -56,17 +56,19 @@ export function isLive(test: Timed): boolean {
 }
 
 /**
- * True once the paper is frozen: the test is approved and its window has
- * opened, so a student may already be sitting it. An unapproved test stays
- * editable past its start time, because no student has ever seen it.
+ * True once the paper is frozen: the test is approved and at least one
+ * student has started it, so the questions cannot change underneath them.
+ * Before anyone starts, even a live test can still be fixed.
  *
- * Database triggers enforce this for real (0008, amended by 0010). This only
- * decides what the UI offers, and lets actions return a readable message.
+ * Database triggers enforce this for real (0008, amended by 0010 and 0015).
+ * This only decides what the UI offers, and lets actions return a readable
+ * message.
  */
 export function isLocked(
-  test: Pick<Timed, "approval_status" | "start_time">,
+  test: Pick<Timed, "approval_status">,
+  submissions: number,
 ): boolean {
-  return test.approval_status === "approved" && hasStarted(test);
+  return test.approval_status === "approved" && submissions > 0;
 }
 
 /** True once the window's opening time has passed, approved or not. */

@@ -93,15 +93,26 @@ export default async function ResultsPage({
         ← Back to test
       </Link>
 
-      <header className="mt-3 mb-7">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          {test.title} — results
-        </h1>
-        <p className="mt-1.5 text-sm text-[var(--text-muted)]">
-          {subject} · {test.class} · {test.term} Term {test.session} ·{" "}
-          {questionList.length} question
-          {questionList.length === 1 ? "" : "s"} · {maxMarks} marks
-        </p>
+      <header className="mt-3 mb-7 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            {test.title} — results
+          </h1>
+          <p className="mt-1.5 text-sm text-[var(--text-muted)]">
+            {subject} · {test.class} · {test.term} Term {test.session} ·{" "}
+            {questionList.length} question
+            {questionList.length === 1 ? "" : "s"} · {maxMarks} marks
+          </p>
+        </div>
+        <Link
+          href={`/print/results/${testId}`}
+          target="_blank"
+          className="rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-medium
+                     text-[var(--text-muted)] transition hover:border-[var(--primary)]
+                     hover:text-[var(--text)]"
+        >
+          Print results
+        </Link>
       </header>
 
       <section className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

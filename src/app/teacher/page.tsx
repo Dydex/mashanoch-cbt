@@ -36,13 +36,19 @@ export default async function TeacherHome() {
   const isAdmin = profile.role === "admin";
   const supabase = await createClient();
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("test")
     .select(
       "id, title, class, term, session, duration_minutes, marks_per_question," +
         " start_time, end_time, approval_status, subjects(name), questions(count)",
     )
     .order("created_at", { ascending: false });
+
+  // A teacher sees their own tests: they cannot open anyone else's anyway.
+  // Admins see every test, since this is where they open one to review it.
+  if (!isAdmin) query = query.eq("created_by", profile.id);
+
+  const { data, error } = await query;
 
   // Submission counts come from a query that reads test_id alone. Embedding
   // submissions(count) above needs read access to every column of
@@ -127,7 +133,7 @@ export default async function TeacherHome() {
         <StatCard
           label="Questions"
           value={totalQuestions}
-          hint="Across all tests"
+          hint={isAdmin ? "Across all tests" : "Across your tests"}
           icon={<IconQuestion />}
         />
         <StatCard

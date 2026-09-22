@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useRef } from "react";
 import { addQuestion, type ActionState } from "../actions";
+import { IMAGE_ACCEPT } from "@/lib/question-image";
 
 const initial: ActionState = {};
 const field =
@@ -24,6 +25,19 @@ export default function AddQuestionForm({ testId }: { testId: string }) {
         <label htmlFor="question_text" className="text-sm font-medium">Question</label>
         <textarea id="question_text" name="question_text" rows={2} required
           className={`mt-1 ${field}`} placeholder="What is the capital of Nigeria?" />
+      </div>
+
+      <div>
+        <label htmlFor="question_image" className="text-sm font-medium">
+          Picture{" "}
+          <span className="font-normal text-[var(--text-muted)]">
+            — optional, for a diagram or map. Up to 2 MB.
+          </span>
+        </label>
+        <input id="question_image" name="image" type="file" accept={IMAGE_ACCEPT}
+          className="mt-1 block w-full text-sm text-[var(--text-muted)]
+                     file:mr-3 file:rounded-lg file:border-0 file:bg-[var(--surface-2)]
+                     file:px-3 file:py-2 file:text-xs file:font-semibold file:text-[var(--text)]" />
       </div>
 
       <fieldset>

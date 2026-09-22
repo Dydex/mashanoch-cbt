@@ -8,6 +8,8 @@ import { requireTeacher, requireTestOwner } from "@/lib/auth";
 import { CLASSES, REVIEW_NOTE_MAX, TERMS } from "@/lib/constants";
 import { isLocked } from "@/lib/test-status";
 import { parseSchoolTime } from "@/lib/time";
+import { readQuestionImage } from "@/lib/question-image";
+import { removeTestImages, storeQuestionImage } from "@/lib/question-image-store";
 
 export type ActionState = { error?: string; notice?: string };
 
@@ -17,28 +19,29 @@ export type ActionState = { error?: string; notice?: string };
  */
 
 /**
- * A test's paper is frozen once it is approved and its window has opened, so
- * no student can have questions change underneath them mid-exam. Database
- * triggers enforce this for real (0008_lock_started_tests.sql, amended by
- * 0010_test_approval.sql); this check exists so the teacher gets a readable
- * message instead of a raw Postgres exception.
+ * A test's paper is frozen once it is approved and a student has started it,
+ * so nobody has questions change underneath them mid-exam. Database triggers
+ * enforce this for real (0008, amended by 0010 and 0015); this check exists
+ * so the teacher gets a readable message instead of a raw Postgres exception.
  *
  * An edit that gets past this check sends a pending or approved test back to
  * draft. That also happens in the database, so no action here repeats it.
  */
 async function testIsLocked(testId: string): Promise<boolean> {
   const admin = createAdminClient();
-  const { data } = await admin
-    .from("test")
-    .select("start_time, approval_status")
-    .eq("id", testId)
-    .single();
-  if (!data) return true;
-  return isLocked(data);
+  const [{ data: test }, { count }] = await Promise.all([
+    admin.from("test").select("approval_status").eq("id", testId).single(),
+    admin
+      .from("submissions")
+      .select("id", { count: "exact", head: true })
+      .eq("test_id", testId),
+  ]);
+  if (!test) return true;
+  return isLocked(test, count ?? 0);
 }
 
 const STARTED =
-  "This test has already started, so its questions can no longer be changed.";
+  "A student has already started this test, so its questions can no longer be changed.";
 
 type TestFields = {
   title: string;
@@ -143,12 +146,12 @@ export async function updateTest(
   const admin = createAdminClient();
   const { data: before } = await admin
     .from("test")
-    .select("start_time, approval_status")
+    .select("approval_status")
     .eq("id", testId)
     .single();
   if (!before) return { error: "That test no longer exists." };
-  if (isLocked(before))
-    return { error: "This test has already started, so its details can no longer be changed." };
+  if (await testIsLocked(testId))
+    return { error: "A student has already started this test, so its details can no longer be changed." };
 
   const parsed = readTestForm(formData);
   if ("error" in parsed) return parsed;
@@ -172,6 +175,34 @@ export async function updateTest(
         ? "Saved. The test is back in draft, so submit it for approval again when you're ready."
         : "Saved.",
   };
+}
+
+/**
+ * Deletes a test, with its questions, approval thread and any images.
+ *
+ * Only while nobody has sat it: a test with submissions is a record of
+ * results, which a school needs to keep.
+ */
+export async function deleteTest(formData: FormData): Promise<void> {
+  const testId = String(formData.get("test_id") ?? "");
+  if (!testId) return;
+
+  await requireTestOwner(testId);
+
+  const admin = createAdminClient();
+  const { count } = await admin
+    .from("submissions")
+    .select("id", { count: "exact", head: true })
+    .eq("test_id", testId);
+  if (count) redirect(`/teacher/${testId}`);
+
+  // Questions, options and the review thread all cascade from the test row;
+  // pictures live in storage, so they are cleared separately.
+  await removeTestImages(testId);
+  await admin.from("test").delete().eq("id", testId);
+
+  revalidatePath("/teacher");
+  redirect("/teacher");
 }
 
 /**
@@ -252,6 +283,9 @@ export async function addQuestion(
   const text = String(formData.get("question_text") ?? "").trim();
   if (!text) return { error: "Write the question." };
 
+  const image = readQuestionImage(formData);
+  if ("error" in image) return image;
+
   const options = [0, 1, 2, 3]
     .map((i) => String(formData.get(`option_${i}`) ?? "").trim())
     .map((value, index) => ({ value, index }))
@@ -299,6 +333,15 @@ export async function addQuestion(
     return { error: oError.message };
   }
 
+  if (image.file) {
+    const stored = await storeQuestionImage(testId, question.id, image.file);
+    if ("error" in stored) return { error: stored.error };
+    await admin
+      .from("questions")
+      .update({ image_url: stored.url })
+      .eq("id", question.id);
+  }
+
   revalidatePath(`/teacher/${testId}`);
   return {};
 }
@@ -319,7 +362,7 @@ export async function deleteQuestion(formData: FormData): Promise<void> {
 }
 
 /**
- * Edits an existing question and its options.
+ * Edits an existing question, its image and its options.
  *
  * Options are updated in place by id rather than deleted and recreated:
  * answers.selected_option_id points at these rows, so recreating them would
@@ -343,6 +386,10 @@ export async function updateQuestion(
   const text = String(formData.get("question_text") ?? "").trim();
   if (!text) return { error: "The question cannot be empty." };
 
+  const image = readQuestionImage(formData);
+  if ("error" in image) return image;
+  const removeImage = formData.get("remove_image") === "on";
+
   const slots = [0, 1, 2, 3].map((i) => ({
     id: String(formData.get(`option_id_${i}`) ?? ""),
     text: String(formData.get(`option_${i}`) ?? "").trim(),
@@ -363,10 +410,21 @@ export async function updateQuestion(
     .update({ is_correct: false })
     .eq("question_id", questionId);
 
-  // 2. The question text itself.
+  // 2. The question text, and its image if it changed.
+  const changes: { question_text: string; image_url?: string | null } = {
+    question_text: text,
+  };
+  if (image.file) {
+    const stored = await storeQuestionImage(testId, questionId, image.file);
+    if ("error" in stored) return { error: stored.error };
+    changes.image_url = stored.url;
+  } else if (removeImage) {
+    changes.image_url = null;
+  }
+
   const { error: qError } = await admin
     .from("questions")
-    .update({ question_text: text })
+    .update(changes)
     .eq("id", questionId)
     .eq("test_id", testId);
   if (qError) return { error: qError.message };
