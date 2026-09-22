@@ -4,6 +4,9 @@ import { requireAdmin } from "@/lib/auth";
 import { Card } from "@/components/ui";
 import { CLASSES } from "@/lib/constants";
 import EditStudent from "./edit-student";
+import ImportStudents from "./import-students";
+import PromoteClass from "./promote-class";
+import RemoveStudent from "./remove-student";
 import { AddStudentForm } from "../account-forms";
 
 const printLink =
@@ -36,9 +39,11 @@ export default async function StudentsPage({
   const { data } = await query.order("class").order("full_name");
   const students = data ?? [];
 
-  // Grouped by class so a whole form can be found at a glance.
-  const byClass = CLASSES.map((c) => ({
+  // Grouped by class so a whole form can be found at a glance. `next` is the
+  // class each one is promoted into at the end of the session.
+  const byClass = CLASSES.map((c, i) => ({
     name: c,
+    next: CLASSES[i + 1] ?? null,
     members: students.filter((s) => s.class === c),
   })).filter((g) => (klass ? g.name === klass : true));
 
@@ -59,45 +64,44 @@ export default async function StudentsPage({
         </Link>
       </header>
 
-      <div>
-        <div className="mb-6 max-w-md">
-          <AddStudentForm />
-        </div>
-
-        <form method="get" className="mb-5 flex flex-wrap gap-2">
-          <input
-            name="q"
-            defaultValue={term}
-            placeholder="Search by name or admission number…"
-            aria-label="Search students"
-            className="min-w-0 flex-1 rounded-lg border border-[var(--border)] bg-[var(--surface)]
-                       px-3 py-2.5 text-sm outline-none transition focus:border-[var(--primary)]
-                       focus:ring-2 focus:ring-[var(--ring)]"
-          />
-          <select
-            name="class"
-            defaultValue={klass}
-            aria-label="Filter by class"
-            className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5
-                       text-sm outline-none focus:border-[var(--primary)]"
-          >
-            <option value="">All classes</option>
-            {CLASSES.map((c) => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
-          <button className="rounded-lg bg-[var(--primary)] px-5 py-2.5 text-sm font-semibold
-                             text-[var(--primary-fg)] transition hover:bg-[var(--primary-hover)]">
-            Search
-          </button>
-          {(term || klass) && (
-            <Link href="/admin/students"
-              className="self-center text-xs text-[var(--text-muted)] hover:underline">
-              Clear
-            </Link>
-          )}
-        </form>
+      <div className="mb-6 grid items-start gap-4 lg:grid-cols-2">
+        <AddStudentForm />
+        <ImportStudents />
       </div>
+
+      <form method="get" className="mb-5 flex flex-wrap gap-2">
+        <input
+          name="q"
+          defaultValue={term}
+          placeholder="Search by name or admission number…"
+          aria-label="Search students"
+          className="min-w-0 flex-1 rounded-lg border border-[var(--border)] bg-[var(--surface)]
+                     px-3 py-2.5 text-sm outline-none transition focus:border-[var(--primary)]
+                     focus:ring-2 focus:ring-[var(--ring)]"
+        />
+        <select
+          name="class"
+          defaultValue={klass}
+          aria-label="Filter by class"
+          className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5
+                     text-sm outline-none focus:border-[var(--primary)]"
+        >
+          <option value="">All classes</option>
+          {CLASSES.map((c) => (
+            <option key={c} value={c}>{c}</option>
+          ))}
+        </select>
+        <button className="rounded-lg bg-[var(--primary)] px-5 py-2.5 text-sm font-semibold
+                           text-[var(--primary-fg)] transition hover:bg-[var(--primary-hover)]">
+          Search
+        </button>
+        {(term || klass) && (
+          <Link href="/admin/students"
+            className="self-center text-xs text-[var(--text-muted)] hover:underline">
+            Clear
+          </Link>
+        )}
+      </form>
 
       {students.length === 0 ? (
         <Card className="px-6 py-12 text-center text-sm text-[var(--text-muted)]">
@@ -116,13 +120,20 @@ export default async function StudentsPage({
                       {group.members.length === 1 ? "" : "s"}
                     </span>
                   </h2>
-                  <Link
-                    href={`/print/students?class=${encodeURIComponent(group.name)}`}
-                    target="_blank"
-                    className={printLink}
-                  >
-                    Print {group.name} list
-                  </Link>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <PromoteClass
+                      klass={group.name}
+                      next={group.next}
+                      count={group.members.length}
+                    />
+                    <Link
+                      href={`/print/students?class=${encodeURIComponent(group.name)}`}
+                      target="_blank"
+                      className={printLink}
+                    >
+                      Print {group.name} list
+                    </Link>
+                  </div>
                 </div>
 
                 <ul className="space-y-2">
@@ -138,12 +149,16 @@ export default async function StudentsPage({
                           Admission no. <span className="font-mono">{p.username}</span>
                         </p>
                       </div>
-                      <EditStudent
-                        id={p.id}
-                        firstName={p.first_name ?? ""}
-                        lastName={p.last_name ?? ""}
-                        admissionNo={p.username}
-                      />
+                      <div className="flex flex-wrap items-center justify-end gap-2">
+                        <EditStudent
+                          id={p.id}
+                          firstName={p.first_name ?? ""}
+                          lastName={p.last_name ?? ""}
+                          admissionNo={p.username}
+                          klass={p.class ?? group.name}
+                        />
+                        <RemoveStudent id={p.id} name={p.full_name} />
+                      </div>
                     </li>
                   ))}
                 </ul>

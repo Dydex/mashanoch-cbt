@@ -5,9 +5,9 @@ import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAdmin } from "@/lib/auth";
 import {
+  ADMISSION_NO_PATTERN,
   authEmailFor,
   CLASSES,
-  ADMISSION_NO_PATTERN,
   normalizeAdmissionNo,
   REVIEW_NOTE_MAX,
 } from "@/lib/constants";
@@ -19,6 +19,8 @@ export type AdminState = {
   notice?: string;
   /** Login details for a student just added. */
   issued?: Slip;
+  /** What a spreadsheet import did, row by row. */
+  imported?: { created: number; problems: string[] };
 };
 
 export type Slip = {
@@ -34,7 +36,9 @@ export type Slip = {
  *
  * Staff never receive a password from us — they get an emailed link and choose
  * their own. Role is fixed here by the inviting admin and comes from trusted
- * server code, never from anything the invitee submits.
+ * server code, never from anything the invitee submits: an invitation cannot
+ * carry app metadata, so the new account starts as a student (0015) and is
+ * moved to its real role here, with the service role.
  */
 export async function inviteStaff(
   _prev: AdminState,
@@ -52,12 +56,26 @@ export async function inviteStaff(
     return { error: "Choose teacher or admin." };
 
   const admin = createAdminClient();
-  const { error } = await admin.auth.admin.inviteUserByEmail(email, {
+  const { data: invited, error } = await admin.auth.admin.inviteUserByEmail(email, {
     data: { username: email, full_name: fullName, role },
     redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback?next=/staff/set-password`,
   });
 
   if (error) return { error: error.message };
+
+  if (invited?.user) {
+    await admin.auth.admin.updateUserById(invited.user.id, {
+      app_metadata: { role },
+    });
+    const { error: roleError } = await admin
+      .from("profiles")
+      .update({ role })
+      .eq("id", invited.user.id);
+    if (roleError)
+      return {
+        error: `Invitation sent, but their role was not set: ${roleError.message}`,
+      };
+  }
 
   revalidatePath("/admin");
   return { notice: `Invitation sent to ${email}. They choose their own password.` };
@@ -83,8 +101,8 @@ function readNames(
 }
 
 /**
- * Reads a admission number from a form, checks its shape, and confirms no one
- * else already has it. `except` is the student being edited, who may keep
+ * Reads an admission number from a form, checks its shape, and confirms no
+ * one else already has it. `except` is the student being edited, who may keep
  * their own number.
  */
 async function claimAdmissionNo(
@@ -95,7 +113,7 @@ async function claimAdmissionNo(
   if (!admissionNo) return { error: "Enter the student's admission number." };
   if (!ADMISSION_NO_PATTERN.test(admissionNo))
     return {
-      error: "A admission number is 3 to 30 letters and digits, and may contain / - or .",
+      error: "An admission number is 3 to 30 letters and digits, and may contain / - or .",
     };
 
   const { data: taken } = await createAdminClient()
@@ -109,13 +127,41 @@ async function claimAdmissionNo(
   return { admissionNo };
 }
 
+/** One new student account, from details already checked. */
+async function createStudentAccount(details: {
+  first: string;
+  last: string;
+  admissionNo: string;
+  klass: string;
+}): Promise<{ error: string } | { id: string }> {
+  const id = randomUUID();
+  const { error } = await createAdminClient().auth.admin.createUser({
+    id,
+    email: authEmailFor(id),
+    password: studentAuthPassword(details.last),
+    email_confirm: true,
+    // The profile's role is read from app metadata, which only the service
+    // role can set (0015).
+    app_metadata: { role: "student" },
+    user_metadata: {
+      username: details.admissionNo,
+      full_name: `${details.first} ${details.last}`,
+      role: "student",
+      class: details.klass,
+      first_name: details.first,
+      last_name: details.last,
+    },
+  });
+  return error ? { error: error.message } : { id };
+}
+
 /**
  * Creates a student account. They sign in with the admission number the admin
  * enters, stored as their username, and their surname as the password.
  *
  * Students have no email, so Supabase Auth gets a synthetic one derived from
- * the profile UUID — never from the admission number, so a mistyped number can
- * be corrected later without recreating the account.
+ * the profile UUID — never from the admission number, so a mistyped number
+ * can be corrected later without recreating the account.
  */
 export async function createStudent(
   _prev: AdminState,
@@ -132,46 +178,171 @@ export async function createStudent(
 
   const claimed = await claimAdmissionNo(formData);
   if ("error" in claimed) return claimed;
-  const username = claimed.admissionNo;
-  const fullName = `${names.first} ${names.last}`;
 
-  const admin = createAdminClient();
-  const id = randomUUID();
-
-  const { error } = await admin.auth.admin.createUser({
-    id,
-    email: authEmailFor(id),
-    password: studentAuthPassword(names.last),
-    email_confirm: true,
-    user_metadata: {
-      username,
-      full_name: fullName,
-      role: "student",
-      class: klass,
-    },
+  const made = await createStudentAccount({
+    first: names.first,
+    last: names.last,
+    admissionNo: claimed.admissionNo,
+    klass,
   });
-
-  if (error) return { error: error.message };
-
-  // The on_auth_user_created trigger (0003) made the profile. The name
-  // columns are filled in here, so that trigger can stay exactly as it is.
-  const { error: nameError } = await admin
-    .from("profiles")
-    .update({ first_name: names.first, last_name: names.last })
-    .eq("id", id);
+  if ("error" in made) return { error: made.error };
 
   revalidatePath("/admin/students");
   return {
-    issued: { fullName, username, password: names.last, class: klass },
-    ...(nameError && {
-      error: `Student created, but their first and last name were not saved separately: ${nameError.message}`,
-    }),
+    issued: {
+      fullName: `${names.first} ${names.last}`,
+      username: claimed.admissionNo,
+      password: names.last,
+      class: klass,
+    },
+  };
+}
+
+const IMPORT_MAX = 200;
+
+/** Splits one line of a CSV, honouring "quoted, fields". */
+function splitCsvLine(line: string): string[] {
+  const cells: string[] = [];
+  let cell = "";
+  let quoted = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (quoted) {
+      if (ch === '"' && line[i + 1] === '"') {
+        cell += '"';
+        i++;
+      } else if (ch === '"') quoted = false;
+      else cell += ch;
+    } else if (ch === '"') quoted = true;
+    else if (ch === ",") {
+      cells.push(cell);
+      cell = "";
+    } else cell += ch;
+  }
+  cells.push(cell);
+  return cells;
+}
+
+/**
+ * Adds a whole list of students from a spreadsheet saved as CSV.
+ *
+ * The first row names the columns; order does not matter. Every row is
+ * checked before anything is created, and a row that cannot be used is
+ * reported and skipped rather than stopping the rest.
+ */
+export async function importStudents(
+  _prev: AdminState,
+  formData: FormData,
+): Promise<AdminState> {
+  await requireAdmin();
+
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0)
+    return { error: "Choose a CSV file to upload." };
+  if (file.size > 1_000_000)
+    return { error: "That file is over 1 MB. Split it into smaller files." };
+
+  const lines = (await file.text())
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+  if (lines.length < 2)
+    return { error: "That file has no rows under its column names." };
+
+  const header = splitCsvLine(lines[0]).map((h) =>
+    h.trim().toLowerCase().replace(/[\s_-]+/g, ""),
+  );
+  const columnFor = (...names: string[]) =>
+    header.findIndex((h) => names.includes(h));
+  const at = {
+    first: columnFor("firstname", "first", "firstnames", "givenname"),
+    last: columnFor("lastname", "last", "surname"),
+    admissionNo: columnFor("admissionno", "admissionnumber", "admission"),
+    klass: columnFor("class", "classname"),
+  };
+  if (Object.values(at).some((i) => i < 0))
+    return {
+      error:
+        "The first row must name the columns: first_name, last_name, admission_no, class.",
+    };
+
+  const rows = lines.slice(1);
+  if (rows.length > IMPORT_MAX)
+    return {
+      error: `That file has ${rows.length} rows. Import at most ${IMPORT_MAX} at a time.`,
+    };
+
+  const admin = createAdminClient();
+  const { data: existing } = await admin.from("profiles").select("username");
+  const taken = new Set((existing ?? []).map((p) => p.username));
+
+  // Checked first, so a duplicate inside the file is caught as well.
+  const problems: string[] = [];
+  const ready: { row: number; first: string; last: string; admissionNo: string; klass: string }[] = [];
+
+  rows.forEach((line, n) => {
+    const cells = splitCsvLine(line);
+    const cell = (i: number) => (cells[i] ?? "").trim().replace(/\s+/g, " ");
+    const where = `Row ${n + 2}`;
+    const first = cell(at.first);
+    const last = cell(at.last);
+    const admissionNo = normalizeAdmissionNo(cell(at.admissionNo));
+    const klass = cell(at.klass).toUpperCase();
+
+    if (!first || !last) {
+      problems.push(`${where}: missing a first or last name.`);
+      return;
+    }
+    if (first.length > NAME_MAX || last.length > NAME_MAX) {
+      problems.push(`${where}: a name is longer than ${NAME_MAX} characters.`);
+      return;
+    }
+    if (!ADMISSION_NO_PATTERN.test(admissionNo)) {
+      problems.push(`${where}: “${cell(at.admissionNo)}” is not a valid admission number.`);
+      return;
+    }
+    if (taken.has(admissionNo)) {
+      problems.push(`${where}: ${admissionNo} is already taken.`);
+      return;
+    }
+    if (!CLASSES.includes(klass as (typeof CLASSES)[number])) {
+      problems.push(`${where}: “${cell(at.klass)}” is not one of ${CLASSES.join(", ")}.`);
+      return;
+    }
+    taken.add(admissionNo);
+    ready.push({ row: n + 2, first, last, admissionNo, klass });
+  });
+
+  // Small batches: this hits the auth admin API once per student, and a whole
+  // class at once invites rate limiting.
+  let created = 0;
+  for (let i = 0; i < ready.length; i += 5) {
+    const chunk = ready.slice(i, i + 5);
+    const results = await Promise.all(
+      chunk.map(async (student) => ({
+        student,
+        made: await createStudentAccount(student),
+      })),
+    );
+    for (const { student, made } of results) {
+      if ("error" in made) problems.push(`Row ${student.row}: ${made.error}`);
+      else created += 1;
+    }
+  }
+
+  revalidatePath("/admin/students");
+  return {
+    imported: { created, problems },
+    notice: `${created} student${created === 1 ? "" : "s"} added${
+      problems.length ? `, ${problems.length} row${problems.length === 1 ? "" : "s"} skipped` : ""
+    }.`,
   };
 }
 
 /**
- * Corrects a student's first name, last name and admission number. A new
- * surname is a new password, so Auth is updated first and the profile
+ * Corrects a student's first name, last name, admission number and class. A
+ * new surname is a new password, so Auth is updated first and the profile
  * follows. The account and its session are otherwise untouched.
  */
 export async function updateStudent(
@@ -195,6 +366,9 @@ export async function updateStudent(
 
   const names = readNames(formData);
   if ("error" in names) return names;
+  const klass = String(formData.get("class") ?? "");
+  if (!CLASSES.includes(klass as (typeof CLASSES)[number]))
+    return { error: "Choose a class." };
   const claimed = await claimAdmissionNo(formData, profileId);
   if ("error" in claimed) return claimed;
 
@@ -214,6 +388,7 @@ export async function updateStudent(
       last_name: names.last,
       full_name: `${names.first} ${names.last}`,
       username: claimed.admissionNo,
+      class: klass,
     })
     .eq("id", profileId);
   if (error) return { error: error.message };
@@ -224,6 +399,182 @@ export async function updateStudent(
       ? `Saved. Their password is now “${names.last}”.`
       : "Saved.",
   };
+}
+
+/**
+ * Removes a student, with everything they sat.
+ *
+ * Their answers and submissions go first, so the delete cannot fail on a
+ * foreign key; deleting the auth account then takes the profile with it.
+ */
+export async function removeStudent(
+  _prev: AdminState,
+  formData: FormData,
+): Promise<AdminState> {
+  await requireAdmin();
+
+  const profileId = String(formData.get("profile_id") ?? "");
+  if (!profileId) return { error: "Missing student." };
+
+  const admin = createAdminClient();
+  const { data: student } = await admin
+    .from("profiles")
+    .select("full_name, role")
+    .eq("id", profileId)
+    .maybeSingle();
+
+  if (!student || student.role !== "student")
+    return { error: "That is not a student account." };
+
+  const { data: submissions } = await admin
+    .from("submissions")
+    .select("id")
+    .eq("student_id", profileId);
+  const ids = (submissions ?? []).map((s) => s.id);
+  if (ids.length) {
+    await admin.from("answers").delete().in("submission_id", ids);
+    await admin.from("submissions").delete().in("id", ids);
+  }
+
+  const { error } = await admin.auth.admin.deleteUser(profileId);
+  if (error) return { error: error.message };
+
+  revalidatePath("/admin/students");
+  return {
+    notice: `${student.full_name} removed${
+      ids.length ? `, with ${ids.length} result${ids.length === 1 ? "" : "s"}` : ""
+    }.`,
+  };
+}
+
+/**
+ * Moves a whole class up a year, the way a school does at the end of a
+ * session: JSS1 becomes JSS2, and so on. A student who repeats the year is
+ * put back with Edit afterwards, and the final class has nowhere to go —
+ * those students are removed once they leave.
+ */
+export async function promoteClass(
+  _prev: AdminState,
+  formData: FormData,
+): Promise<AdminState> {
+  await requireAdmin();
+
+  const klass = String(formData.get("class") ?? "");
+  const step = CLASSES.indexOf(klass as (typeof CLASSES)[number]);
+  if (step < 0) return { error: "Choose a class." };
+
+  const next = CLASSES[step + 1];
+  if (!next)
+    return {
+      error: `${klass} is the final class, so there is nowhere to promote to. Remove those students once they have left.`,
+    };
+
+  const admin = createAdminClient();
+  const { data: moved, error } = await admin
+    .from("profiles")
+    .update({ class: next })
+    .eq("role", "student")
+    .eq("class", klass)
+    .select("id");
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/admin/students");
+  const count = moved?.length ?? 0;
+  return {
+    notice: `${count} student${count === 1 ? "" : "s"} moved from ${klass} to ${next}.`,
+  };
+}
+
+/** A subject's name, tidied, or why it cannot be used. */
+function readSubjectName(formData: FormData): { error: string } | { name: string } {
+  const name = String(formData.get("name") ?? "").trim().replace(/\s+/g, " ");
+  if (name.length < 2) return { error: "Enter the subject's name." };
+  if (name.length > 60) return { error: "Keep the name under 60 characters." };
+  return { name };
+}
+
+/** True when another subject already goes by this name. */
+async function subjectNameTaken(name: string, except?: string) {
+  const { data } = await createAdminClient()
+    .from("subjects")
+    .select("id")
+    .ilike("name", name.replace(/[%_]/g, "\\$&"))
+    .maybeSingle();
+  return Boolean(data && data.id !== except);
+}
+
+export async function createSubject(
+  _prev: AdminState,
+  formData: FormData,
+): Promise<AdminState> {
+  await requireAdmin();
+
+  const read = readSubjectName(formData);
+  if ("error" in read) return read;
+  if (await subjectNameTaken(read.name))
+    return { error: `${read.name} is already on the list.` };
+
+  const { error } = await createAdminClient()
+    .from("subjects")
+    .insert({ name: read.name });
+  if (error) return { error: error.message };
+
+  revalidatePath("/admin/subjects");
+  revalidatePath("/teacher/new");
+  return { notice: `${read.name} added.` };
+}
+
+export async function renameSubject(
+  _prev: AdminState,
+  formData: FormData,
+): Promise<AdminState> {
+  await requireAdmin();
+
+  const id = String(formData.get("subject_id") ?? "");
+  if (!id) return { error: "Missing subject." };
+
+  const read = readSubjectName(formData);
+  if ("error" in read) return read;
+  if (await subjectNameTaken(read.name, id))
+    return { error: `${read.name} is already on the list.` };
+
+  const { error } = await createAdminClient()
+    .from("subjects")
+    .update({ name: read.name })
+    .eq("id", id);
+  if (error) return { error: error.message };
+
+  revalidatePath("/admin/subjects");
+  revalidatePath("/teacher");
+  return { notice: `Renamed to ${read.name}.` };
+}
+
+/** Removes a subject, unless tests already use it. */
+export async function deleteSubject(
+  _prev: AdminState,
+  formData: FormData,
+): Promise<AdminState> {
+  await requireAdmin();
+
+  const id = String(formData.get("subject_id") ?? "");
+  if (!id) return { error: "Missing subject." };
+
+  const admin = createAdminClient();
+  const { count } = await admin
+    .from("test")
+    .select("id", { count: "exact", head: true })
+    .eq("subject_id", id);
+  if (count)
+    return {
+      error: `${count} test${count === 1 ? " uses" : "s use"} this subject, so it cannot be removed. Rename it instead.`,
+    };
+
+  const { error } = await admin.from("subjects").delete().eq("id", id);
+  if (error) return { error: error.message };
+
+  revalidatePath("/admin/subjects");
+  return { notice: "Subject removed." };
 }
 
 /**
@@ -317,7 +668,9 @@ export async function reviewTest(
   const admin = createAdminClient();
   const { data: test } = await admin
     .from("test")
-    .select("created_by, approval_status, start_time, end_time, questions(count)")
+    .select(
+      "created_by, approval_status, start_time, end_time, questions(count), submissions(count)",
+    )
     .eq("id", testId)
     .maybeSingle();
 
@@ -355,9 +708,10 @@ export async function reviewTest(
     return error ? { error: error.message } : { notice: "Comment added." };
   }
 
-  // Students may already be sitting it. Pulling it now would strand them.
-  if (isLocked(test))
-    return { error: "This test has already started, so its approval can no longer change." };
+  // A student is already sitting it. Pulling it now would strand them.
+  const sat = (test.submissions as { count: number }[])[0]?.count ?? 0;
+  if (isLocked(test, sat))
+    return { error: "A student has already started this test, so its approval can no longer change." };
 
   if (decision === "changes") {
     if (!note)

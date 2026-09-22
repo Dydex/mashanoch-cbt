@@ -2,30 +2,34 @@
 
 import { useActionState, useState } from "react";
 import { updateStudent, type AdminState } from "../actions";
+import { CLASSES } from "@/lib/constants";
 
 const field =
   "min-w-0 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 " +
   "text-xs outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--ring)]";
 
 /**
- * Corrects one student's first name, last name and admission number, inline in
- * their row. Changing the last name changes their password, which is their
- * surname. Fields are controlled so a refused save keeps what was typed,
- * rather than React clearing the form.
+ * Corrects one student's first name, last name, admission number and class,
+ * inline in their row. Changing the last name changes their password, which
+ * is their surname; changing the class is how a repeating student is put
+ * back after a promotion. Fields are controlled so a refused save keeps what
+ * was typed, rather than React clearing the form.
  */
 export default function EditStudent({
   id,
   firstName,
   lastName,
   admissionNo,
+  klass,
 }: {
   id: string;
   firstName: string;
   lastName: string;
   admissionNo: string;
+  klass: string;
 }) {
   const [editing, setEditing] = useState(false);
-  const [values, setValues] = useState({ firstName, lastName, admissionNo });
+  const [values, setValues] = useState({ firstName, lastName, admissionNo, klass });
   const [state, action, pending] = useActionState(
     async (prev: AdminState, formData: FormData) => {
       const result = await updateStudent(prev, formData);
@@ -35,8 +39,9 @@ export default function EditStudent({
     {},
   );
 
-  const set = (key: keyof typeof values) =>
-    (e: React.ChangeEvent<HTMLInputElement>) =>
+  const set =
+    (key: keyof typeof values) =>
+    (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
       setValues((v) => ({ ...v, [key]: e.target.value }));
 
   if (!editing) {
@@ -50,7 +55,7 @@ export default function EditStudent({
         <button
           type="button"
           onClick={() => {
-            setValues({ firstName, lastName, admissionNo });
+            setValues({ firstName, lastName, admissionNo, klass });
             setEditing(true);
           }}
           className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium
@@ -68,14 +73,20 @@ export default function EditStudent({
       <input type="hidden" name="profile_id" value={id} />
       <input name="first_name" value={values.firstName} onChange={set("firstName")}
         aria-label="First name" placeholder="First name" required autoFocus
-        className={`${field} w-32`} />
+        className={`${field} w-28`} />
       <input name="last_name" value={values.lastName} onChange={set("lastName")}
         aria-label="Last name (password)" placeholder="Last name" required
-        className={`${field} w-32`} />
+        className={`${field} w-28`} />
       <input name="admissionNo" value={values.admissionNo} onChange={set("admissionNo")}
         aria-label="Admission number" placeholder="Admission no." required
         autoCapitalize="characters" autoCorrect="off" spellCheck={false}
-        className={`${field} w-40 font-mono uppercase`} />
+        className={`${field} w-36 font-mono uppercase`} />
+      <select name="class" value={values.klass} onChange={set("klass")}
+        aria-label="Class" required className={`${field} w-24`}>
+        {CLASSES.map((c) => (
+          <option key={c} value={c}>{c}</option>
+        ))}
+      </select>
       <button
         disabled={pending}
         className="rounded-lg bg-[var(--primary)] px-3 py-1.5 text-xs font-semibold

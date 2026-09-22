@@ -53,6 +53,7 @@ export async function staffNav(role: Role): Promise<NavConfig> {
               badge: count || undefined,
             },
             { href: "/teacher", label: "Tests", icon: <IconBook /> },
+            { href: "/admin/subjects", label: "Subjects", icon: <IconResults /> },
           ],
         },
       ],
