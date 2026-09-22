@@ -6,8 +6,8 @@ import { login, type LoginState } from "./actions";
 const initial: LoginState = {};
 const field =
   "mt-2 w-full rounded-lg border border-neutral-300 bg-white px-4 py-3 text-neutral-900 " +
-  "placeholder:text-neutral-400 outline-none transition focus:border-[#5b58d6] " +
-  "focus:ring-2 focus:ring-[#5b58d6]/20";
+  "placeholder:text-neutral-400 outline-none transition focus:border-[var(--primary)] " +
+  "focus:ring-2 focus:ring-[var(--ring)]";
 
 export default function LoginPage() {
   const [state, formAction, pending] = useActionState(login, initial);
@@ -26,7 +26,7 @@ export default function LoginPage() {
             htmlFor="admissionNo"
             className="block text-sm font-medium text-neutral-800"
           >
-            Admission number<span className="text-[#5b58d6]">*</span>
+            Admission number<span className="text-[var(--primary)]">*</span>
           </label>
           <input
             id="admissionNo"
@@ -46,7 +46,7 @@ export default function LoginPage() {
             htmlFor="password"
             className="block text-sm font-medium text-neutral-800"
           >
-            Password<span className="text-[#5b58d6]">*</span>
+            Password<span className="text-[var(--primary)]">*</span>
           </label>
           <div className="relative">
             <input
@@ -87,8 +87,8 @@ export default function LoginPage() {
         <button
           type="submit"
           disabled={pending}
-          className="w-full rounded-lg bg-[#5b58d6] px-4 py-3 font-semibold text-white
-                     transition hover:bg-[#4b48c4] disabled:opacity-60"
+          className="w-full rounded-lg bg-[var(--primary)] px-4 py-3 font-semibold text-white
+                     transition hover:bg-[var(--primary-hover)] disabled:opacity-60"
         >
           {pending ? "Signing in…" : "Sign in"}
         </button>

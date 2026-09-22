@@ -38,8 +38,8 @@ export function BrandMark({
       <span
         aria-hidden
         className={`${SIZES[size]} grid shrink-0 place-items-center rounded-xl
-                    bg-indigo-500 font-bold text-white
-                    shadow-[0_8px_24px_rgba(99,102,241,.35)] ${className}`}
+                    bg-[var(--primary)] font-serif font-bold text-white
+                    shadow-[0_8px_24px_rgba(176,18,26,.35)] ${className}`}
       >
         M
       </span>

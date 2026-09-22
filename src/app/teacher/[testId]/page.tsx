@@ -136,32 +136,37 @@ export default async function AuthorTestPage({
         ← Back to tests
       </Link>
 
-      <header className="mt-3 mb-5 rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50 to-white p-6 dark:border-indigo-950 dark:from-indigo-950/40 dark:to-[var(--surface)]">
-        <div className="flex flex-wrap items-center gap-2.5">
-          <h1 className="text-2xl font-semibold tracking-tight">{test.title}</h1>
-          <Badge tone={status.tone} dot>
-            {status.label}
-          </Badge>
-        </div>
-        <p className="mt-1.5 text-sm text-[var(--text-muted)]">
-          {subject} · {test.class} · {test.term} Term {test.session} ·{" "}
-          {test.duration_minutes} min · {list.length}{" "}
-          question{list.length === 1 ? "" : "s"} · {total} marks
-        </p>
-        <p className="mt-0.5 text-sm text-[var(--text-subtle)]">
-          {timeFmt.format(new Date(test.start_time))} —{" "}
-          {timeFmt.format(new Date(test.end_time))}
-        </p>
+      <header className="mt-3 mb-5 overflow-hidden rounded-2xl bg-[var(--ink)] text-white shadow-[var(--shadow)]">
+        <div className="h-1 bg-[var(--primary)]" />
+        <div className="p-6 sm:p-7">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <h1 className="font-serif text-2xl font-semibold tracking-tight">
+              {test.title}
+            </h1>
+            <Badge tone={status.tone} dot>
+              {status.label}
+            </Badge>
+          </div>
+          <p className="mt-1.5 text-sm text-white/70">
+            {subject} · {test.class} · {test.term} Term {test.session} ·{" "}
+            {test.duration_minutes} min · {list.length}{" "}
+            question{list.length === 1 ? "" : "s"} · {total} marks
+          </p>
+          <p className="mt-0.5 text-sm text-white/50">
+            {timeFmt.format(new Date(test.start_time))} —{" "}
+            {timeFmt.format(new Date(test.end_time))}
+          </p>
 
-        <Link
-          href={`/teacher/${testId}/results`}
-          className="mt-4 inline-flex items-center gap-2 rounded-lg bg-[var(--primary)]
-                     px-4 py-2.5 text-sm font-semibold text-[var(--primary-fg)]
-                     transition hover:bg-[var(--primary-hover)]"
-        >
-          View results
-          {sat ? ` (${sat})` : ""}
-        </Link>
+          <Link
+            href={`/teacher/${testId}/results`}
+            className="mt-4 inline-flex items-center gap-2 rounded-lg bg-white
+                       px-4 py-2.5 text-sm font-semibold text-[var(--ink)]
+                       transition hover:bg-white/90"
+          >
+            View results
+            {sat ? ` (${sat})` : ""}
+          </Link>
+        </div>
       </header>
 
       <ApprovalPanel

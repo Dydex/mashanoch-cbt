@@ -34,12 +34,12 @@ export function NavLink({
       // The label is still in the DOM when collapsed, just visually hidden, so
       // screen readers and the accessible name are unaffected by the toggle.
       title={collapsed ? label : undefined}
-      className={`flex items-center rounded-xl py-2.5 text-sm transition ${
+      className={`flex items-center rounded-lg py-2.5 text-sm transition ${
         collapsed ? "justify-center px-0" : "gap-3 px-3"
       } ${
         active
-          ? "bg-indigo-500 font-semibold text-white shadow-[0_8px_24px_rgba(99,102,241,.25)]"
-          : "text-white/55 hover:bg-white/[.07] hover:text-white"
+          ? "bg-[var(--primary)] font-semibold text-white shadow-[0_8px_20px_rgba(176,18,26,.35)]"
+          : "text-white/60 hover:bg-white/[.07] hover:text-white"
       }`}
     >
       <span className="shrink-0">{icon}</span>
@@ -47,7 +47,11 @@ export function NavLink({
         {label}
       </span>
       {badge !== undefined && !collapsed && (
-        <span className="shrink-0 rounded-full bg-white/10 px-1.5 py-0.5 text-[10px] font-semibold text-white/70">
+        <span
+          className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
+            active ? "bg-white/20 text-white" : "bg-[var(--primary)] text-white"
+          }`}
+        >
           {badge}
         </span>
       )}
@@ -74,8 +78,8 @@ export function MobileNavLink({
     <Link
       href={href}
       aria-current={active ? "page" : undefined}
-      className={`flex min-w-20 flex-col items-center gap-1 rounded-xl px-4 py-2 text-[10px] font-medium transition ${
-        active ? "bg-indigo-500 text-white" : "text-white/55"
+      className={`flex min-w-18 flex-col items-center gap-1 rounded-xl px-3 py-2 text-[10px] font-medium transition ${
+        active ? "bg-[var(--primary)] text-white" : "text-white/55"
       }`}
     >
       {icon}

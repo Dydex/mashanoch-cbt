@@ -7,6 +7,7 @@ import {
   Avatar,
   Badge,
   Card,
+  PageHeader,
   StatCard,
   IconUsers,
   IconDoc,
@@ -58,17 +59,10 @@ export default async function AdminDashboard() {
 
   return (
     <div className="mx-auto max-w-4xl">
-      <section className="mb-7 flex flex-wrap items-center gap-4 rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50 via-white to-white p-6 dark:border-indigo-950 dark:from-indigo-950/40 dark:via-[var(--surface)]">
-        <Avatar name={me.full_name} size="lg" />
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            {greeting()}, {firstName}
-          </h1>
-          <p className="mt-0.5 text-sm text-[var(--text-muted)]">
-            {dateFmt.format(new Date())}
-          </p>
-        </div>
-      </section>
+      <PageHeader
+        title={`${greeting()}, ${firstName}`}
+        subtitle={dateFmt.format(new Date())}
+      />
 
       {pendingCount > 0 && (
         <Link

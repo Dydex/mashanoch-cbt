@@ -1,65 +1,49 @@
 @import "tailwindcss";
 
 /* ---------------------------------------------------------------
-   Design tokens. Light is the base; dark overrides only the values
-   that change, so nothing can be defined in one theme and missing in
-   the other.
+   Design tokens, taken from the school crest: crimson and charcoal
+   on white. Light only — the app is used in classrooms and labs, and
+   its printed slips and results are black on white, so one theme
+   keeps the screen and the paper looking like the same school.
    --------------------------------------------------------------- */
 
 :root {
-  --bg: #f4f6fb;
+  /* Paper, not blue-grey: warmer and calmer behind long question text. */
+  --bg: #f6f5f3;
   --surface: #ffffff;
-  --surface-2: #f1f3f6;
-  --border: #e3e6ec;
-  --border-strong: #d2d7e0;
+  --surface-2: #f2f1ee;
+  --border: #e4e2dd;
+  --border-strong: #cfccc5;
 
-  --text: #10131a;
-  --text-muted: #646c7e;
-  --text-subtle: #8b93a5;
+  --text: #1c1f26;
+  --text-muted: #5f636d;
+  --text-subtle: #8b8f99;
 
-  --primary: #4f46e5;
-  --primary-hover: #4338ca;
-  --primary-soft: #eef2ff;
+  /* The crest's red, darkened enough for white text to pass contrast. */
+  --primary: #b0121a;
+  --primary-hover: #8d0e15;
+  --primary-soft: #fdeceb;
   --primary-fg: #ffffff;
 
-  --success: #12855c;
-  --success-soft: #e2f5ed;
-  --warning: #9a6413;
-  --warning-soft: #fdf1dc;
-  --danger: #b4231f;
-  --danger-soft: #fdeaea;
+  /* The crest's charcoal: sidebar, headings, printed rules. */
+  --ink: #1c1f26;
+  --ink-soft: #2a2e37;
 
-  --ring: rgba(91, 88, 214, 0.28);
-  --shadow: 0 1px 2px rgba(16, 19, 26, 0.05), 0 4px 16px rgba(16, 19, 26, 0.06);
-}
+  --success: #16704a;
+  --success-soft: #e3f3ec;
+  --warning: #8a5a12;
+  --warning-soft: #fbefdb;
+  --danger: #b0121a;
+  --danger-soft: #fdeceb;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0c0e13;
-    --surface: #14171e;
-    --surface-2: #1a1e27;
-    --border: #262b36;
-    --border-strong: #333947;
+  --ring: rgba(176, 18, 26, 0.24);
+  --shadow: 0 1px 2px rgba(28, 31, 38, 0.06), 0 6px 20px rgba(28, 31, 38, 0.07);
+  --shadow-lg: 0 12px 36px rgba(28, 31, 38, 0.12);
 
-    --text: #e9ecf2;
-    --text-muted: #98a0b0;
-    --text-subtle: #6f7787;
-
-    --primary: #7d7aec;
-    --primary-hover: #8f8cf5;
-    --primary-soft: #21203a;
-    --primary-fg: #0c0e13;
-
-    --success: #3ecf96;
-    --success-soft: #10281f;
-    --warning: #e0a758;
-    --warning-soft: #2a1f10;
-    --danger: #f0736e;
-    --danger-soft: #2c1414;
-
-    --ring: rgba(125, 122, 236, 0.36);
-    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 28px rgba(0, 0, 0, 0.32);
-  }
+  /* Set by next/font in layout.tsx; the fallbacks keep the app looking
+     right if the fonts fail to load. */
+  --font-sans: var(--font-body), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: var(--font-heading), Georgia, "Times New Roman", serif;
 }
 
 @theme inline {
@@ -70,18 +54,26 @@
   --color-text: var(--text);
   --color-muted: var(--text-muted);
   --color-primary: var(--primary);
+  --color-ink: var(--ink);
+  --font-sans: var(--font-sans);
+  --font-serif: var(--font-display);
 }
 
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
-  background-image: radial-gradient(rgba(79,70,229,.07) 1px, transparent 1px);
-  background-size: 24px 24px;
 }
 
-::selection { background: var(--primary); color: white; }
+/* Page and section headings carry the school's formal voice; everything
+   else stays in the sans, where small text is easier to read. */
+h1, h2, .display {
+  font-family: var(--font-display);
+  letter-spacing: -0.01em;
+}
+
+::selection { background: var(--primary); color: var(--primary-fg); }
 
 button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
 
@@ -89,4 +81,9 @@ button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
 :focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
+}
+
+/* Printed pages are always black on white, whatever the screen shows. */
+@media print {
+  body { background: #ffffff; }
 }

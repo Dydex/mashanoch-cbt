@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { requireStudent } from "@/lib/auth";
-import { Badge, Card, IconDoc, IconChevron } from "@/components/ui";
+import { Badge, Card, PageHeader, IconDoc, IconChevron } from "@/components/ui";
 import { timeFmt } from "@/lib/time";
 
 type OpenTest = {
@@ -47,14 +47,10 @@ export default async function ExamHome() {
 
   return (
     <div className="mx-auto max-w-4xl">
-      <header className="mb-7 rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50 to-white p-6 dark:border-indigo-950 dark:from-indigo-950/40 dark:to-[var(--surface)]">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          Welcome, {firstName}
-        </h1>
-        <p className="mt-1 text-sm text-[var(--text-muted)]">
-          {profile.class} · These are the tests open to you right now.
-        </p>
-      </header>
+      <PageHeader
+        title={`Welcome, ${firstName}`}
+        subtitle={`${profile.class} · These are the tests open to you right now.`}
+      />
 
       {!tests.length ? (
         <Card className="px-6 py-14 text-center">

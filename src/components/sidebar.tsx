@@ -36,14 +36,14 @@ export function Sidebar({
   return (
     <aside
       data-collapsed={collapsed || undefined}
-      className={`hidden shrink-0 flex-col bg-[#101323] text-white transition-[width]
-                  duration-200 ease-out lg:sticky lg:top-0 lg:flex lg:h-screen ${
-                    collapsed ? "w-[76px]" : "w-[280px]"
+      className={`hidden shrink-0 flex-col bg-[var(--ink)] text-white transition-[width]
+                  duration-200 ease-out lg:sticky lg:top-0 lg:flex lg:h-screen print:hidden ${
+                    collapsed ? "w-[76px]" : "w-[272px]"
                   }`}
     >
       {/* brand + toggle */}
       <div
-        className={`flex items-center py-7 ${
+        className={`flex items-center border-b border-white/10 py-6 ${
           collapsed ? "flex-col gap-4 px-3" : "gap-3 px-6"
         }`}
       >
@@ -51,10 +51,10 @@ export function Sidebar({
 
         {!collapsed && (
           <span className="min-w-0 flex-1 leading-tight">
-            <span className="block truncate text-base font-semibold">
+            <span className="block truncate font-serif text-base font-semibold">
               Mashanoch
             </span>
-            <span className="block truncate text-[11px] text-white/45">
+            <span className="block truncate text-[11px] uppercase tracking-[0.16em] text-white/45">
               Private Schools
             </span>
           </span>
@@ -73,7 +73,7 @@ export function Sidebar({
         </button>
       </div>
 
-      <nav className={`flex-1 overflow-y-auto pb-4 ${collapsed ? "px-3" : "px-4"}`}>
+      <nav className={`flex-1 overflow-y-auto py-5 ${collapsed ? "px-3" : "px-4"}`}>
         <ul className="space-y-1">
           {nav.map((item) => (
             <li key={item.href}>
@@ -83,11 +83,11 @@ export function Sidebar({
         </ul>
 
         {sections?.map((section) => (
-          <div key={section.title} className="mt-6">
+          <div key={section.title} className="mt-7">
             {collapsed ? (
               <div className="mx-auto mb-2 h-px w-8 bg-white/10" />
             ) : (
-              <p className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-[.16em] text-white/30">
+              <p className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-[.18em] text-white/35">
                 {section.title}
               </p>
             )}
@@ -106,7 +106,7 @@ export function Sidebar({
         <form action={logout}>
           <button
             title={collapsed ? "Log out" : undefined}
-            className={`flex w-full items-center rounded-lg py-2.5 text-sm text-white/55
+            className={`flex w-full items-center rounded-lg py-2.5 text-sm text-white/60
                         transition hover:bg-white/10 hover:text-white ${
                           collapsed ? "justify-center px-0" : "gap-3 px-3"
                         }`}

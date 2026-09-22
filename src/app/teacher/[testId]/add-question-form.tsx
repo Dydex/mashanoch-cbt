@@ -61,7 +61,7 @@ export default function AddQuestionForm({ testId }: { testId: string }) {
       </fieldset>
 
       {state.error && (
-        <p role="alert" className="text-sm text-red-600 dark:text-red-400">{state.error}</p>
+        <p role="alert" className="text-sm text-[var(--danger)]">{state.error}</p>
       )}
 
       <button type="submit" disabled={pending}

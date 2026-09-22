@@ -46,32 +46,46 @@ export async function AppShell({
 
       <div className="flex min-w-0 flex-1 flex-col">
         {/* ---------------- Topbar ---------------- */}
-        <header className="sticky top-0 z-20 border-b border-[var(--border)] bg-[var(--surface)]/80 backdrop-blur-xl">
-          <div className="flex h-[72px] items-center justify-between gap-4 px-5 lg:px-8">
+        <header className="sticky top-0 z-20 border-b border-[var(--border)] bg-[var(--surface)]/85 backdrop-blur-xl print:hidden">
+          <div className="flex h-[68px] items-center justify-between gap-4 px-5 lg:px-8">
             <Link href="/" className="flex items-center gap-2.5 lg:hidden">
               <BrandMark size="sm" />
-              <span className="text-sm font-semibold">Mashanoch</span>
+              <span className="font-serif text-sm font-semibold">Mashanoch</span>
             </Link>
 
-            <div className="hidden text-sm font-bold text-[var(--text)] lg:block">Workspace</div>
-            <div
-              className="ml-auto rounded-full border border-[var(--border)] bg-[var(--surface)] p-1.5 shadow-sm"
-              title="Profile"
-              aria-label="Profile"
-            >
-              <Avatar name={profile.full_name} size="md" />
+            <div className="hidden items-center gap-3 lg:flex">
+              <span className="h-5 w-0.5 rounded-full bg-[var(--primary)]" />
+              <span className="text-sm font-semibold">Workspace</span>
+            </div>
+
+            <div className="ml-auto flex items-center gap-3">
+              <span className="hidden text-right leading-tight sm:block">
+                <span className="block text-sm font-semibold">
+                  {profile.full_name}
+                </span>
+                <span className="block text-[11px] capitalize text-[var(--text-subtle)]">
+                  {profile.role}
+                </span>
+              </span>
+              <div
+                className="rounded-full border border-[var(--border)] bg-[var(--surface)] p-1.5 shadow-sm"
+                title="Profile"
+                aria-label="Profile"
+              >
+                <Avatar name={profile.full_name} size="md" />
+              </div>
             </div>
           </div>
         </header>
 
         <main className="flex-1 px-5 py-7 pb-24 lg:px-8 lg:pb-10">{children}</main>
 
-        <nav className="fixed inset-x-3 bottom-3 z-30 flex items-center justify-around rounded-2xl border border-white/10 bg-[#101323]/95 p-2 shadow-2xl backdrop-blur-xl lg:hidden">
+        <nav className="fixed inset-x-3 bottom-3 z-30 flex items-center justify-around rounded-2xl border border-white/10 bg-[var(--ink)]/95 p-2 shadow-2xl backdrop-blur-xl lg:hidden print:hidden">
           {nav.map((item) => (
             <MobileNavLink key={item.href} {...item} />
           ))}
           <form action={logout}>
-            <button className="flex min-w-20 flex-col items-center gap-1 rounded-xl px-4 py-2 text-[10px] font-medium text-white/55">
+            <button className="flex min-w-18 flex-col items-center gap-1 rounded-xl px-3 py-2 text-[10px] font-medium text-white/55">
               <IconLogout /><span>Log out</span>
             </button>
           </form>

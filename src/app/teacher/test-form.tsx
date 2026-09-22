@@ -135,7 +135,7 @@ export default function TestForm({
       </div>
 
       {state.error && (
-        <p role="alert" className="text-sm text-red-600 dark:text-red-400">{state.error}</p>
+        <p role="alert" className="text-sm text-[var(--danger)]">{state.error}</p>
       )}
       {state.notice && (
         <p role="status" className="text-sm text-[var(--success)]">{state.notice}</p>

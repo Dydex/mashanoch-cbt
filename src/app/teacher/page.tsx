@@ -6,6 +6,7 @@ import { dateFmt, greeting, timeFmt } from "@/lib/time";
 import {
   Badge,
   Card,
+  PageHeader,
   StatCard,
   IconDoc,
   IconLive,
@@ -93,28 +94,21 @@ export default async function TeacherHome() {
   return (
     <>
       {/* ---------- Welcome ---------- */}
-      <section className="relative mb-8 flex flex-wrap items-center justify-between gap-4 overflow-hidden rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50 via-white to-white p-6 dark:border-indigo-950 dark:from-indigo-950/40 dark:via-[var(--surface)]">
-        <div>
-            <h1 className="text-2xl font-semibold tracking-tight">
-              {greeting()}, {firstName}
-            </h1>
-            <p className="mt-0.5 text-sm text-[var(--text-muted)]">
-              {dateFmt.format(new Date())}
-            </p>
-        </div>
-
+      <PageHeader
+        title={`${greeting()}, ${firstName}`}
+        subtitle={dateFmt.format(new Date())}
+      >
         {!isAdmin && (
           <Link
             href="/teacher/new"
             className="inline-flex items-center gap-2 rounded-lg bg-[var(--primary)] px-4 py-2.5
-                       text-sm font-semibold text-[var(--primary-fg)] shadow-[var(--shadow)]
-                       transition hover:bg-[var(--primary-hover)]"
+                       text-sm font-semibold text-white transition hover:bg-[var(--primary-hover)]"
           >
             <IconPlus />
             New test
           </Link>
         )}
-      </section>
+      </PageHeader>
 
       {/* ---------- Stats ---------- */}
       <section className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

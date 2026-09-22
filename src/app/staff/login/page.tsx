@@ -7,8 +7,8 @@ import { staffLogin, type StaffState } from "../actions";
 const initial: StaffState = {};
 const field =
   "mt-2 w-full rounded-lg border border-neutral-300 bg-white px-4 py-3 text-neutral-900 " +
-  "placeholder:text-neutral-400 outline-none transition focus:border-[#5b58d6] " +
-  "focus:ring-2 focus:ring-[#5b58d6]/20";
+  "placeholder:text-neutral-400 outline-none transition focus:border-[var(--primary)] " +
+  "focus:ring-2 focus:ring-[var(--ring)]";
 
 export default function StaffLoginPage() {
   const [state, formAction, pending] = useActionState(staffLogin, initial);
@@ -20,7 +20,7 @@ export default function StaffLoginPage() {
       <form action={formAction} className="mt-8 space-y-5">
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-neutral-800">
-            Email address<span className="text-[#5b58d6]">*</span>
+            Email address<span className="text-[var(--primary)]">*</span>
           </label>
           <input id="email" name="email" type="email" autoComplete="username"
             autoFocus required placeholder="you@example.com" className={field} />
@@ -28,7 +28,7 @@ export default function StaffLoginPage() {
 
         <div>
           <label htmlFor="password" className="block text-sm font-medium text-neutral-800">
-            Password<span className="text-[#5b58d6]">*</span>
+            Password<span className="text-[var(--primary)]">*</span>
           </label>
           <input id="password" name="password" type="password"
             autoComplete="current-password" required className={field} />
@@ -41,14 +41,14 @@ export default function StaffLoginPage() {
         )}
 
         <button type="submit" disabled={pending}
-          className="w-full rounded-lg bg-[#5b58d6] px-4 py-3 font-semibold text-white
-                     transition hover:bg-[#4b48c4] disabled:opacity-60">
+          className="w-full rounded-lg bg-[var(--primary)] px-4 py-3 font-semibold text-white
+                     transition hover:bg-[var(--primary-hover)] disabled:opacity-60">
           {pending ? "Signing in…" : "Sign in"}
         </button>
       </form>
 
       <p className="mt-6 border-t border-neutral-200 pt-5 text-center text-sm text-neutral-500">
-        <Link href="/staff/forgot-password" className="font-medium text-[#5b58d6] hover:underline">
+        <Link href="/staff/forgot-password" className="font-medium text-[var(--primary)] hover:underline">
           Forgot your password?
         </Link>
       </p>

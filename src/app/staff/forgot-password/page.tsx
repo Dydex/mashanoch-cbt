@@ -73,8 +73,8 @@ export default function ForgotPasswordPage() {
           <input id="email" name="email" type="email" autoComplete="username"
             autoFocus required value={email} onChange={(e) => setEmail(e.target.value)}
             className="mt-2 w-full rounded-lg border border-neutral-300 bg-white px-4 py-3
-                       text-neutral-900 outline-none transition focus:border-[#5b58d6]
-                       focus:ring-2 focus:ring-[#5b58d6]/20" />
+                       text-neutral-900 outline-none transition focus:border-[var(--primary)]
+                       focus:ring-2 focus:ring-[var(--ring)]" />
         </div>
 
         {state.error && (
@@ -111,8 +111,8 @@ export default function ForgotPasswordPage() {
         )}
 
         <button type="submit" disabled={pending || resendIn > 0}
-          className="w-full rounded-lg bg-[#5b58d6] px-4 py-3 font-semibold text-white
-                     transition hover:bg-[#4b48c4] disabled:opacity-60">
+          className="w-full rounded-lg bg-[var(--primary)] px-4 py-3 font-semibold text-white
+                     transition hover:bg-[var(--primary-hover)] disabled:opacity-60">
           {pending
             ? "Sending…"
             : !sent

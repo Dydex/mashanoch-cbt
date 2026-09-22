@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-/* Small presentational primitives shared across the teacher surfaces.
+/* Small presentational primitives shared across the staff surfaces.
    Server components — no hooks, no client bundle cost. */
 
 export function Avatar({
@@ -84,6 +84,37 @@ export function Card({
   );
 }
 
+/**
+ * A page's masthead: the school's charcoal band with a crimson rule, used at
+ * the top of every staff surface so they read as one site.
+ */
+export function PageHeader({
+  title,
+  subtitle,
+  children,
+}: {
+  title: string;
+  subtitle?: ReactNode;
+  children?: ReactNode;
+}) {
+  return (
+    <header className="mb-7 overflow-hidden rounded-2xl bg-[var(--ink)] text-white shadow-[var(--shadow)]">
+      <div className="h-1 bg-[var(--primary)]" />
+      <div className="flex flex-wrap items-center justify-between gap-4 px-6 py-6 sm:px-8">
+        <div className="min-w-0">
+          <h1 className="font-serif text-2xl font-semibold tracking-tight">
+            {title}
+          </h1>
+          {subtitle && (
+            <p className="mt-1 text-sm text-white/65">{subtitle}</p>
+          )}
+        </div>
+        {children}
+      </div>
+    </header>
+  );
+}
+
 export function StatCard({
   label,
   value,
@@ -96,12 +127,16 @@ export function StatCard({
   icon: ReactNode;
 }) {
   return (
-    <Card className="group relative overflow-hidden p-5 hover:shadow-[0_12px_32px_rgba(16,19,26,.09)]">
-      <span className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-indigo-500 via-cyan-400 to-emerald-400 opacity-70" />
+    <Card className="group relative overflow-hidden p-5 hover:shadow-[var(--shadow-lg)]">
+      <span className="absolute inset-x-0 top-0 h-0.5 bg-[var(--primary)] opacity-80" />
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-xs font-medium text-[var(--text-muted)]">{label}</p>
-          <p className="mt-1.5 text-2xl font-semibold tracking-tight">{value}</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-[var(--text-muted)]">
+            {label}
+          </p>
+          <p className="mt-1.5 font-serif text-3xl font-semibold tracking-tight">
+            {value}
+          </p>
           {hint && (
             <p className="mt-0.5 truncate text-xs text-[var(--text-subtle)]">
               {hint}

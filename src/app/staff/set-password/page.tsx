@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 const initial: StaffState = {};
 const field =
   "mt-2 w-full rounded-lg border border-neutral-300 bg-white px-4 py-3 text-neutral-900 " +
-  "outline-none transition focus:border-[#5b58d6] focus:ring-2 focus:ring-[#5b58d6]/20";
+  "outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--ring)]";
 
 export default function SetPasswordPage() {
   const [state, formAction, pending] = useActionState(setPassword, initial);
@@ -72,8 +72,8 @@ export default function SetPasswordPage() {
         )}
 
         <button type="submit" disabled={pending || !ready}
-          className="w-full rounded-lg bg-[#5b58d6] px-4 py-3 font-semibold text-white
-                     transition hover:bg-[#4b48c4] disabled:opacity-60">
+          className="w-full rounded-lg bg-[var(--primary)] px-4 py-3 font-semibold text-white
+                     transition hover:bg-[var(--primary-hover)] disabled:opacity-60">
           {!ready
             ? "Checking your link…"
             : pending
