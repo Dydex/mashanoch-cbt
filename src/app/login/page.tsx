@@ -11,62 +11,68 @@ const field =
 
 export default function LoginPage() {
   const [state, formAction, pending] = useActionState(login, initial);
-  const [showPin, setShowPin] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   return (
     <>
       <h2 className="text-3xl font-bold text-neutral-900">Student sign in</h2>
       <p className="mt-2 text-sm text-neutral-600">
-        Use the ID and PIN on your slip.
+        Use your admission number. Your password is your surname.
       </p>
 
       <form action={formAction} className="mt-8 space-y-5">
         <div>
           <label
-            htmlFor="username"
+            htmlFor="admissionNo"
             className="block text-sm font-medium text-neutral-800"
           >
-            Student ID<span className="text-[#5b58d6]">*</span>
+            Admission number<span className="text-[#5b58d6]">*</span>
           </label>
           <input
-            id="username"
-            name="username"
-            inputMode="numeric"
+            id="admissionNo"
+            name="admissionNo"
             autoComplete="username"
+            autoCapitalize="characters"
+            autoCorrect="off"
+            spellCheck={false}
             autoFocus
             required
-            placeholder="260147"
-            className={`${field} tracking-widest`}
+            className={`${field} uppercase tracking-wide`}
           />
         </div>
 
         <div>
           <label
-            htmlFor="pin"
+            htmlFor="password"
             className="block text-sm font-medium text-neutral-800"
           >
-            PIN<span className="text-[#5b58d6]">*</span>
+            Password<span className="text-[#5b58d6]">*</span>
           </label>
           <div className="relative">
             <input
-              id="pin"
-              name="pin"
-              type={showPin ? "text" : "password"}
+              id="password"
+              name="password"
+              type={showPassword ? "text" : "password"}
               autoComplete="current-password"
+              autoCorrect="off"
+              spellCheck={false}
               required
-              className={`${field} pr-12 tracking-widest`}
+              className={`${field} pr-12`}
             />
             <button
               type="button"
-              onClick={() => setShowPin((v) => !v)}
-              aria-label={showPin ? "Hide PIN" : "Show PIN"}
-              aria-pressed={showPin}
+              onClick={() => setShowPassword((v) => !v)}
+              aria-label={showPassword ? "Hide password" : "Show password"}
+              aria-pressed={showPassword}
               className="absolute inset-y-0 right-0 mt-2 flex w-12 items-center justify-center
                          text-neutral-400 transition hover:text-neutral-700"
             >
-              {showPin ? <EyeOffIcon /> : <EyeIcon />}
+              {showPassword ? <EyeOffIcon /> : <EyeIcon />}
             </button>
           </div>
+          <p className="mt-1.5 text-xs text-neutral-500">
+            Your surname. Capital letters don&apos;t matter.
+          </p>
         </div>
 
         {state.error && (
@@ -89,7 +95,7 @@ export default function LoginPage() {
       </form>
 
       <p className="mt-6 border-t border-neutral-200 pt-5 text-center text-xs text-neutral-400">
-        Lost your PIN? Your exam officer can issue a new one.
+        Can&apos;t sign in? Ask your exam officer to check your details.
       </p>
     </>
   );

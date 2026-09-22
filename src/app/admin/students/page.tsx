@@ -3,9 +3,12 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAdmin } from "@/lib/auth";
 import { Card } from "@/components/ui";
 import { CLASSES } from "@/lib/constants";
-import ResetPin from "../reset-pin";
-import BulkReset from "./bulk-reset";
+import EditStudent from "./edit-student";
 import { AddStudentForm } from "../account-forms";
+
+const printLink =
+  "rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-medium " +
+  "text-[var(--text-muted)] transition hover:border-[var(--primary)] hover:text-[var(--text)]";
 
 export default async function StudentsPage({
   searchParams,
@@ -17,14 +20,18 @@ export default async function StudentsPage({
   const admin = createAdminClient();
 
   const term = q.trim();
+  // Commas and brackets are syntax inside a PostgREST or() filter; a search
+  // term containing them would break the query rather than match anything.
+  const safeTerm = term.replace(/[,()]/g, "");
 
   let query = admin
     .from("profiles")
-    .select("id, username, full_name, class")
+    .select("id, username, full_name, first_name, last_name, class")
     .eq("role", "student");
 
   if (klass) query = query.eq("class", klass);
-  if (term) query = query.or(`full_name.ilike.%${term}%,username.ilike.%${term}%`);
+  if (safeTerm)
+    query = query.or(`full_name.ilike.%${safeTerm}%,username.ilike.%${safeTerm}%`);
 
   const { data } = await query.order("class").order("full_name");
   const students = data ?? [];
@@ -37,16 +44,22 @@ export default async function StudentsPage({
 
   return (
     <div className="mx-auto max-w-4xl">
-      <header className="mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight">Accounts</h1>
-        <p className="mt-1 text-sm text-[var(--text-muted)]">
-          {students.length} student{students.length === 1 ? "" : "s"}
-          {klass ? ` in ${klass}` : ""}
-          {term ? ` matching “${term}”` : ""}.
-        </p>
+      <header className="mb-6 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Accounts</h1>
+          <p className="mt-1 text-sm text-[var(--text-muted)]">
+            {students.length} student{students.length === 1 ? "" : "s"}
+            {klass ? ` in ${klass}` : ""}
+            {term ? ` matching “${term}”` : ""}. Each signs in with their
+            admission number, and their last name as the password.
+          </p>
+        </div>
+        <Link href="/print/students" target="_blank" className={printLink}>
+          Print all students
+        </Link>
       </header>
 
-      <div className="print:hidden">
+      <div>
         <div className="mb-6 max-w-md">
           <AddStudentForm />
         </div>
@@ -55,7 +68,7 @@ export default async function StudentsPage({
           <input
             name="q"
             defaultValue={term}
-            placeholder="Search by name or ID…"
+            placeholder="Search by name or admission number…"
             aria-label="Search students"
             className="min-w-0 flex-1 rounded-lg border border-[var(--border)] bg-[var(--surface)]
                        px-3 py-2.5 text-sm outline-none transition focus:border-[var(--primary)]
@@ -103,25 +116,34 @@ export default async function StudentsPage({
                       {group.members.length === 1 ? "" : "s"}
                     </span>
                   </h2>
-                  <div className="print:hidden">
-                    <BulkReset klass={group.name} count={group.members.length} />
-                  </div>
+                  <Link
+                    href={`/print/students?class=${encodeURIComponent(group.name)}`}
+                    target="_blank"
+                    className={printLink}
+                  >
+                    Print {group.name} list
+                  </Link>
                 </div>
 
-                <ul className="space-y-2 print:hidden">
+                <ul className="space-y-2">
                   {group.members.map((p) => (
                     <li
                       key={p.id}
-                      className="flex items-center justify-between gap-4 rounded-xl border
+                      className="flex flex-wrap items-center justify-between gap-4 rounded-xl border
                                  border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow)]"
                     >
                       <div className="min-w-0">
                         <p className="truncate text-sm font-semibold">{p.full_name}</p>
                         <p className="truncate text-xs text-[var(--text-muted)]">
-                          ID <span className="font-mono tracking-widest">{p.username}</span>
+                          Admission no. <span className="font-mono">{p.username}</span>
                         </p>
                       </div>
-                      <ResetPin id={p.id} />
+                      <EditStudent
+                        id={p.id}
+                        firstName={p.first_name ?? ""}
+                        lastName={p.last_name ?? ""}
+                        admissionNo={p.username}
+                      />
                     </li>
                   ))}
                 </ul>

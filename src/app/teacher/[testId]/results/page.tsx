@@ -157,7 +157,7 @@ export default async function ResultsPage({
                       {s.profiles?.full_name ?? "Unknown student"}
                     </p>
                     <p className="truncate text-xs text-[var(--text-muted)]">
-                      ID {s.profiles?.username} ·{" "}
+                      Admission no. {s.profiles?.username} ·{" "}
                       {finished && s.submitted_at
                         ? `submitted ${timeFmt.format(new Date(s.submitted_at))}`
                         : `started ${timeFmt.format(new Date(s.started_at))}`}

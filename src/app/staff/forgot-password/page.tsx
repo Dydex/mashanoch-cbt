@@ -129,7 +129,7 @@ export default function ForgotPasswordPage() {
         </Link>
       </p>
       <p className="mt-3 text-center text-xs text-neutral-400">
-        Students cannot reset their own PIN — an administrator issues a new one.
+        Students: your password is your surname. Ask an administrator if you still cannot sign in.
       </p>
     </>
   );

@@ -7,7 +7,7 @@ export type StaffState = { error?: string; notice?: string };
 
 /**
  * Staff sign in with a real email address and a password they chose
- * themselves, never a PIN. Teachers can read the answer key and admins can
+ * themselves, never a generated one. Teachers can read the answer key and admins can
  * create accounts, so those credentials must not be something printed on a
  * slip and typed in a room full of students.
  */

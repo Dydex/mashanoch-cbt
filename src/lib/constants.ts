@@ -4,14 +4,27 @@ import { schoolParts } from "@/lib/time";
  * Students and teachers never see or type an email address. Supabase Auth
  * requires one, so we synthesise it from the profile's UUID.
  *
- * Deriving it from the UUID rather than the username is deliberate: the school
- * has not issued admission numbers yet. When it does, changing a username is a
- * single UPDATE — the auth record, the password and the session are untouched.
+ * Deriving it from the UUID rather than the username is deliberate: a
+ * student's username is their admission number, and setting or correcting it is
+ * a single UPDATE. The auth record, the password and the session are untouched.
  */
 export const AUTH_EMAIL_DOMAIN = "mashnock.local";
 
 export const authEmailFor = (profileId: string) =>
   `${profileId}@${AUTH_EMAIL_DOMAIN}`;
+
+/**
+ * Students sign in with the admission number the school issued them, stored as
+ * their profile's username. Case and spaces are ignored, so "mps/ 2026/001"
+ * and "MPS/2026/001" are the same number: every admission number is stored, and
+ * looked up, in this form.
+ */
+export function normalizeAdmissionNo(value: string): string {
+  return value.replace(/\s+/g, "").toUpperCase();
+}
+
+/** 3 to 30 characters: letters, digits, and / - . after the first. */
+export const ADMISSION_NO_PATTERN = /^[A-Z0-9][A-Z0-9/.-]{2,29}$/;
 
 export const CLASSES = ["JSS1", "JSS2", "JSS3", "SS1", "SS2"] as const;
 export type SchoolClass = (typeof CLASSES)[number];

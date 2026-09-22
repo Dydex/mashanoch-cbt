@@ -1,33 +1,33 @@
 "use server";
 
-import { randomInt, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAdmin } from "@/lib/auth";
-import { authEmailFor, CLASSES, REVIEW_NOTE_MAX } from "@/lib/constants";
+import {
+  authEmailFor,
+  CLASSES,
+  ADMISSION_NO_PATTERN,
+  normalizeAdmissionNo,
+  REVIEW_NOTE_MAX,
+} from "@/lib/constants";
+import { normalizeSurname, studentAuthPassword } from "@/lib/student-password";
 import { isLocked } from "@/lib/test-status";
-import { schoolParts } from "@/lib/time";
 
 export type AdminState = {
   error?: string;
   notice?: string;
-  /** Shown once, so the admin can write the slip. Never recoverable after. */
+  /** Login details for a student just added. */
   issued?: Slip;
-  /** Same, for a whole class at once. */
-  issuedBatch?: Slip[];
 };
 
 export type Slip = {
   fullName: string;
   username: string;
-  pin: string;
+  /** The surname, which is the password. */
+  password: string;
   class: string;
 };
-
-// Ambiguous characters (0/O, 1/l/I) left out — these get read off paper.
-const ALPHABET = "abcdefghjkmnpqrstuvwxyz23456789";
-const newPin = () =>
-  Array.from({ length: 6 }, () => ALPHABET[randomInt(ALPHABET.length)]).join("");
 
 /**
  * Invites a teacher or admin.
@@ -63,12 +63,59 @@ export async function inviteStaff(
   return { notice: `Invitation sent to ${email}. They choose their own password.` };
 }
 
+const NAME_MAX = 50;
+
+/** A student's first and last name from a form, tidied of stray spaces. */
+function readNames(
+  formData: FormData,
+): { error: string } | { first: string; last: string } {
+  const tidy = (key: string) =>
+    String(formData.get(key) ?? "").trim().replace(/\s+/g, " ");
+  const first = tidy("first_name");
+  const last = tidy("last_name");
+
+  if (!first) return { error: "Enter the student's first name." };
+  if (!last)
+    return { error: "Enter the student's last name. It is their password." };
+  if (first.length > NAME_MAX || last.length > NAME_MAX)
+    return { error: `Keep each name under ${NAME_MAX} characters.` };
+  return { first, last };
+}
+
 /**
- * Creates a student account and issues an ID and PIN.
+ * Reads a admission number from a form, checks its shape, and confirms no one
+ * else already has it. `except` is the student being edited, who may keep
+ * their own number.
+ */
+async function claimAdmissionNo(
+  formData: FormData,
+  except?: string,
+): Promise<{ error: string } | { admissionNo: string }> {
+  const admissionNo = normalizeAdmissionNo(String(formData.get("admissionNo") ?? ""));
+  if (!admissionNo) return { error: "Enter the student's admission number." };
+  if (!ADMISSION_NO_PATTERN.test(admissionNo))
+    return {
+      error: "A admission number is 3 to 30 letters and digits, and may contain / - or .",
+    };
+
+  const { data: taken } = await createAdminClient()
+    .from("profiles")
+    .select("id, full_name")
+    .eq("username", admissionNo)
+    .maybeSingle();
+  if (taken && taken.id !== except)
+    return { error: `${admissionNo} already belongs to ${taken.full_name}.` };
+
+  return { admissionNo };
+}
+
+/**
+ * Creates a student account. They sign in with the admission number the admin
+ * enters, stored as their username, and their surname as the password.
  *
  * Students have no email, so Supabase Auth gets a synthetic one derived from
- * the profile UUID — never from the username, so the school can swap in real
- * admission numbers later without recreating accounts or reissuing PINs.
+ * the profile UUID — never from the admission number, so a mistyped number can
+ * be corrected later without recreating the account.
  */
 export async function createStudent(
   _prev: AdminState,
@@ -76,36 +123,25 @@ export async function createStudent(
 ): Promise<AdminState> {
   await requireAdmin();
 
-  const fullName = String(formData.get("full_name") ?? "").trim();
-  const klass = String(formData.get("class") ?? "");
+  const names = readNames(formData);
+  if ("error" in names) return names;
 
-  if (!fullName) return { error: "Enter the student's full name." };
+  const klass = String(formData.get("class") ?? "");
   if (!CLASSES.includes(klass as (typeof CLASSES)[number]))
     return { error: "Choose a class." };
 
+  const claimed = await claimAdmissionNo(formData);
+  if ("error" in claimed) return claimed;
+  const username = claimed.admissionNo;
+  const fullName = `${names.first} ${names.last}`;
+
   const admin = createAdminClient();
-
-  // IDs are <2-digit join year><4-digit serial>, e.g. 260147.
-  const prefix = String(schoolParts().year).slice(-2);
-  const { data: existing } = await admin
-    .from("profiles")
-    .select("username")
-    .like("username", `${prefix}%`)
-    .order("username", { ascending: false })
-    .limit(1);
-
-  const lastSerial = existing?.[0]
-    ? Number(existing[0].username.slice(2))
-    : 0;
-  const username = `${prefix}${String(lastSerial + 1).padStart(4, "0")}`;
-
-  const pin = newPin();
   const id = randomUUID();
 
   const { error } = await admin.auth.admin.createUser({
     id,
     email: authEmailFor(id),
-    password: pin,
+    password: studentAuthPassword(names.last),
     email_confirm: true,
     user_metadata: {
       username,
@@ -117,12 +153,28 @@ export async function createStudent(
 
   if (error) return { error: error.message };
 
-  revalidatePath("/admin");
-  return { issued: { fullName, username, pin, class: klass } };
+  // The on_auth_user_created trigger (0003) made the profile. The name
+  // columns are filled in here, so that trigger can stay exactly as it is.
+  const { error: nameError } = await admin
+    .from("profiles")
+    .update({ first_name: names.first, last_name: names.last })
+    .eq("id", id);
+
+  revalidatePath("/admin/students");
+  return {
+    issued: { fullName, username, password: names.last, class: klass },
+    ...(nameError && {
+      error: `Student created, but their first and last name were not saved separately: ${nameError.message}`,
+    }),
+  };
 }
 
-/** Issues a fresh PIN. The old one stops working immediately. */
-export async function resetStudentPin(
+/**
+ * Corrects a student's first name, last name and admission number. A new
+ * surname is a new password, so Auth is updated first and the profile
+ * follows. The account and its session are otherwise untouched.
+ */
+export async function updateStudent(
   _prev: AdminState,
   formData: FormData,
 ): Promise<AdminState> {
@@ -132,29 +184,45 @@ export async function resetStudentPin(
   if (!profileId) return { error: "Missing student." };
 
   const admin = createAdminClient();
-  const { data: profile } = await admin
+  const { data: student } = await admin
     .from("profiles")
-    .select("username, full_name, role, class")
+    .select("role, last_name")
     .eq("id", profileId)
     .maybeSingle();
 
-  if (!profile || profile.role !== "student")
+  if (!student || student.role !== "student")
     return { error: "That is not a student account." };
 
-  const pin = newPin();
-  const { error } = await admin.auth.admin.updateUserById(profileId, {
-    password: pin,
-  });
+  const names = readNames(formData);
+  if ("error" in names) return names;
+  const claimed = await claimAdmissionNo(formData, profileId);
+  if ("error" in claimed) return claimed;
+
+  const surnameChanged =
+    normalizeSurname(names.last) !== normalizeSurname(student.last_name ?? "");
+  if (surnameChanged) {
+    const { error } = await admin.auth.admin.updateUserById(profileId, {
+      password: studentAuthPassword(names.last),
+    });
+    if (error) return { error: error.message };
+  }
+
+  const { error } = await admin
+    .from("profiles")
+    .update({
+      first_name: names.first,
+      last_name: names.last,
+      full_name: `${names.first} ${names.last}`,
+      username: claimed.admissionNo,
+    })
+    .eq("id", profileId);
   if (error) return { error: error.message };
 
-  revalidatePath("/admin");
+  revalidatePath("/admin/students");
   return {
-    issued: {
-      fullName: profile.full_name,
-      username: profile.username,
-      pin,
-      class: profile.class ?? "",
-    },
+    notice: surnameChanged
+      ? `Saved. Their password is now “${names.last}”.`
+      : "Saved.",
   };
 }
 
@@ -214,78 +282,6 @@ export async function removeStaff(
       owned && owned > 0
         ? `${target.full_name} removed. ${owned} test${owned === 1 ? "" : "s"} transferred to you.`
         : `${target.full_name} removed.`,
-  };
-}
-
-
-/**
- * Regenerates the PIN for every student in one class.
- *
- * This is the answer to "reset everyone after the exam period" without giving
- * students a shared PIN. Each student still gets their own secret, so one
- * pupil can never sign in as another — but the admin does it in one action
- * and prints one sheet.
- *
- * The new PINs are returned once and are not recoverable afterwards: Supabase
- * stores only a hash, which is what stops a database leak handing over every
- * account.
- */
-export async function resetClassPins(
-  _prev: AdminState,
-  formData: FormData,
-): Promise<AdminState> {
-  await requireAdmin();
-
-  const klass = String(formData.get("class") ?? "");
-  if (!CLASSES.includes(klass as (typeof CLASSES)[number]))
-    return { error: "Choose a class." };
-
-  const admin = createAdminClient();
-  const { data: students } = await admin
-    .from("profiles")
-    .select("id, username, full_name, class")
-    .eq("role", "student")
-    .eq("class", klass)
-    .order("full_name");
-
-  if (!students?.length)
-    return { error: `No students in ${klass}.` };
-
-  const slips: Slip[] = [];
-  const failed: string[] = [];
-
-  // Small batches rather than one big Promise.all: this hits the auth admin
-  // API once per student and a whole class at once invites rate limiting.
-  for (let i = 0; i < students.length; i += 5) {
-    const chunk = students.slice(i, i + 5);
-    await Promise.all(
-      chunk.map(async (student) => {
-        const pin = newPin();
-        const { error } = await admin.auth.admin.updateUserById(student.id, {
-          password: pin,
-        });
-        if (error) {
-          failed.push(student.full_name);
-          return;
-        }
-        slips.push({
-          fullName: student.full_name,
-          username: student.username,
-          pin,
-          class: student.class ?? klass,
-        });
-      }),
-    );
-  }
-
-  slips.sort((a, b) => a.fullName.localeCompare(b.fullName));
-
-  revalidatePath("/admin/students");
-  return {
-    issuedBatch: slips,
-    notice: failed.length
-      ? `${slips.length} PINs reset. Failed for: ${failed.join(", ")}.`
-      : `${slips.length} PINs reset for ${klass}. Print this sheet now — they cannot be shown again.`,
   };
 }
 

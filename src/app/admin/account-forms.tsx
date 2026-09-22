@@ -77,14 +77,28 @@ export function AddStudentForm() {
     >
       <h2 className="text-sm font-semibold">Add a student</h2>
       <p className="mt-1 text-xs text-[var(--text-muted)]">
-        An ID and PIN are generated. Write them down — the PIN cannot be recovered.
+        They sign in with their admission number, and their last name as the
+        password.
       </p>
 
       <div className="mt-4 space-y-3">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div>
+            <label htmlFor="student_first" className={label}>First name</label>
+            <input id="student_first" name="first_name" required
+              autoComplete="off" placeholder="Ada" className={field} />
+          </div>
+          <div>
+            <label htmlFor="student_last" className={label}>Last name (surname)</label>
+            <input id="student_last" name="last_name" required
+              autoComplete="off" placeholder="Obi" className={field} />
+          </div>
+        </div>
         <div>
-          <label htmlFor="student_name" className={label}>Full name</label>
-          <input id="student_name" name="full_name" required
-            placeholder="Ada Obi" className={field} />
+          <label htmlFor="student_admission_no" className={label}>Admission number</label>
+          <input id="student_admission_no" name="admissionNo" required
+            autoCapitalize="characters" autoCorrect="off" spellCheck={false}
+            className={`${field} uppercase`} />
         </div>
         <div>
           <label htmlFor="student_class" className={label}>Class</label>
@@ -110,27 +124,30 @@ export function AddStudentForm() {
   );
 }
 
-/** Shown once. There is no way to read the PIN back afterwards. */
+/** The login details of a student just added. */
 export function Slip({ issued }: { issued: NonNullable<AdminState["issued"]> }) {
   return (
     <div className="mt-3 rounded-xl border-2 border-dashed border-[var(--primary)] bg-[var(--primary-soft)] p-4">
       <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--primary)]">
-        Write this down now
+        Login details
       </p>
       <p className="mt-2 text-sm font-semibold">{issued.fullName}</p>
       {issued.class && (
         <p className="text-xs text-[var(--text-muted)]">{issued.class}</p>
       )}
       <dl className="mt-3 grid grid-cols-2 gap-3">
-        <div>
-          <dt className="text-[11px] text-[var(--text-muted)]">ID</dt>
-          <dd className="font-mono text-lg font-semibold tracking-widest">{issued.username}</dd>
+        <div className="min-w-0">
+          <dt className="text-[11px] text-[var(--text-muted)]">Admission no.</dt>
+          <dd className="break-all font-mono text-base font-semibold">{issued.username}</dd>
         </div>
-        <div>
-          <dt className="text-[11px] text-[var(--text-muted)]">PIN</dt>
-          <dd className="font-mono text-lg font-semibold tracking-widest">{issued.pin}</dd>
+        <div className="min-w-0">
+          <dt className="text-[11px] text-[var(--text-muted)]">Password</dt>
+          <dd className="break-all font-mono text-base font-semibold">{issued.password}</dd>
         </div>
       </dl>
+      <p className="mt-2 text-[11px] text-[var(--text-muted)]">
+        The password is their surname. Capital letters don&apos;t matter.
+      </p>
     </div>
   );
 }

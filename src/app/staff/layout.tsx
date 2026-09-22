@@ -15,7 +15,7 @@ export default function StaffAuthLayout({
             href="/login"
             className="font-medium text-white/85 underline underline-offset-2 hover:text-white"
           >
-            Sign in with your ID and PIN
+            Sign in with your admission number and password
           </Link>
         </p>
       }
