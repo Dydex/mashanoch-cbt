@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState } from "react";
 import { login, type LoginState } from "./actions";
+import PasswordField from "@/components/password-field";
 
 const initial: LoginState = {};
 const field =
@@ -11,7 +12,6 @@ const field =
 
 export default function LoginPage() {
   const [state, formAction, pending] = useActionState(login, initial);
-  const [showPassword, setShowPassword] = useState(false);
 
   return (
     <>
@@ -41,39 +41,11 @@ export default function LoginPage() {
           />
         </div>
 
-        <div>
-          <label
-            htmlFor="password"
-            className="block text-sm font-medium text-neutral-800"
-          >
-            Password<span className="text-[var(--primary)]">*</span>
-          </label>
-          <div className="relative">
-            <input
-              id="password"
-              name="password"
-              type={showPassword ? "text" : "password"}
-              autoComplete="current-password"
-              autoCorrect="off"
-              spellCheck={false}
-              required
-              className={`${field} pr-12`}
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword((v) => !v)}
-              aria-label={showPassword ? "Hide password" : "Show password"}
-              aria-pressed={showPassword}
-              className="absolute inset-y-0 right-0 mt-2 flex w-12 items-center justify-center
-                         text-neutral-400 transition hover:text-neutral-700"
-            >
-              {showPassword ? <EyeOffIcon /> : <EyeIcon />}
-            </button>
-          </div>
-          <p className="mt-1.5 text-xs text-neutral-500">
-            Your surname. Capital letters don&apos;t matter.
-          </p>
-        </div>
+        <PasswordField
+          id="password"
+          label="Password"
+          hint="Your surname. Capital letters don't matter."
+        />
 
         {state.error && (
           <p
@@ -98,31 +70,5 @@ export default function LoginPage() {
         Can&apos;t sign in? Ask your exam officer to check your details.
       </p>
     </>
-  );
-}
-
-function EyeIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path
-        d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z"
-        stroke="currentColor"
-        strokeWidth="1.7"
-      />
-      <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.7" />
-    </svg>
-  );
-}
-
-function EyeOffIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path
-        d="M3 3l18 18M10.6 10.6a3 3 0 004.2 4.2M9.4 5.3A9.6 9.6 0 0112 5c6.4 0 10 7 10 7a17.7 17.7 0 01-3.4 4.3M6.2 6.9A17.4 17.4 0 002 12s3.6 7 10 7a9.7 9.7 0 004-.8"
-        stroke="currentColor"
-        strokeWidth="1.7"
-        strokeLinecap="round"
-      />
-    </svg>
   );
 }

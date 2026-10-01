@@ -3,11 +3,9 @@
 import { useActionState, useEffect, useState } from "react";
 import { setPassword, type StaffState } from "../actions";
 import { createClient } from "@/lib/supabase/client";
+import PasswordField from "@/components/password-field";
 
 const initial: StaffState = {};
-const field =
-  "mt-2 w-full rounded-lg border border-neutral-300 bg-white px-4 py-3 text-neutral-900 " +
-  "outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--ring)]";
 
 export default function SetPasswordPage() {
   const [state, formAction, pending] = useActionState(setPassword, initial);
@@ -37,22 +35,21 @@ export default function SetPasswordPage() {
       </p>
 
       <form action={formAction} className="mt-7 space-y-5">
-        <div>
-          <label htmlFor="password" className="block text-sm font-medium text-neutral-800">
-            New password
-          </label>
-          <input id="password" name="password" type="password"
-            autoComplete="new-password" autoFocus required minLength={10} className={field} />
-          <p className="mt-1.5 text-xs text-neutral-500">At least 10 characters.</p>
-        </div>
+        <PasswordField
+          id="password"
+          label="New password"
+          hint="At least 10 characters."
+          autoComplete="new-password"
+          autoFocus
+          minLength={10}
+        />
 
-        <div>
-          <label htmlFor="confirm" className="block text-sm font-medium text-neutral-800">
-            Confirm password
-          </label>
-          <input id="confirm" name="confirm" type="password"
-            autoComplete="new-password" required minLength={10} className={field} />
-        </div>
+        <PasswordField
+          id="confirm"
+          label="Confirm password"
+          autoComplete="new-password"
+          minLength={10}
+        />
 
         {state.error && (
           <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">

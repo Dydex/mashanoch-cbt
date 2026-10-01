@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useActionState } from "react";
 import { staffLogin, type StaffState } from "../actions";
+import PasswordField from "@/components/password-field";
 
 const initial: StaffState = {};
 const field =
@@ -26,13 +27,7 @@ export default function StaffLoginPage() {
             autoFocus required placeholder="you@example.com" className={field} />
         </div>
 
-        <div>
-          <label htmlFor="password" className="block text-sm font-medium text-neutral-800">
-            Password<span className="text-[var(--primary)]">*</span>
-          </label>
-          <input id="password" name="password" type="password"
-            autoComplete="current-password" required className={field} />
-        </div>
+        <PasswordField id="password" label="Password" />
 
         {state.error && (
           <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
