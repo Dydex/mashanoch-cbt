@@ -33,7 +33,6 @@ type TestRow = {
 
 export default async function TeacherHome() {
   const profile = await requireStaff();
-  // Admins come here to open tests for review. They never create them.
   const isAdmin = profile.role === "admin";
   const supabase = await createClient();
 
@@ -44,23 +43,13 @@ export default async function TeacherHome() {
         " start_time, end_time, approval_status, subjects(name), questions(count)",
     )
     .order("created_at", { ascending: false });
-
-  // A teacher sees their own tests: they cannot open anyone else's anyway.
-  // Admins see every test, since this is where they open one to review it.
   if (!isAdmin) query = query.eq("created_by", profile.id);
-
   const { data, error } = await query;
 
-  // Submission counts come from a query that reads test_id alone. Embedding
-  // submissions(count) above needs read access to every column of
-  // submissions, and signed-in users cannot read score (0012), so that embed
-  // failed the whole list.
   const { data: submissionRows, error: submissionsError } = await supabase
     .from("submissions")
     .select("test_id");
 
-  // A failed query must not pass for an empty list: say so, and log why.
-  // Fields spelled out: the error object itself logs as "{}".
   for (const [what, e] of [
     ["Tests list", error],
     ["Submission counts", submissionsError],
@@ -74,7 +63,6 @@ export default async function TeacherHome() {
   }
 
   const tests = (data ?? []) as unknown as TestRow[];
-
   const submissionsByTest = new Map<string, number>();
   for (const s of submissionRows ?? [])
     submissionsByTest.set(s.test_id, (submissionsByTest.get(s.test_id) ?? 0) + 1);
@@ -88,12 +76,11 @@ export default async function TeacherHome() {
     0,
   );
   const liveCount = tests.filter(isLive).length;
-
   const firstName = profile.full_name.split(/\s+/).slice(-1)[0];
 
   return (
     <>
-      {/* ---------- Welcome ---------- */}
+      
       <PageHeader
         title={`${greeting()}, ${firstName}`}
         subtitle={dateFmt.format(new Date())}
@@ -110,7 +97,7 @@ export default async function TeacherHome() {
         )}
       </PageHeader>
 
-      {/* ---------- Stats ---------- */}
+      
       <section className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           label="Tests"
@@ -138,7 +125,7 @@ export default async function TeacherHome() {
         />
       </section>
 
-      {/* ---------- Tests ---------- */}
+      
       <section>
         <div className="mb-3 flex items-baseline justify-between">
           <h2 className="text-base font-semibold">

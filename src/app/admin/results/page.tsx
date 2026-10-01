@@ -32,8 +32,6 @@ type Tally = { done: number[]; open: number };
 
 export default async function AdminResults() {
   await requireAdmin();
-
-  // Service role: scores are not readable by `authenticated`, by design.
   const admin = createAdminClient();
 
   const { data: testRows } = await admin
@@ -43,13 +41,11 @@ export default async function AdminResults() {
         " approval_status, subjects(name), questions(count)",
     )
     .order("start_time", { ascending: false });
-
   const tests = (testRows ?? []) as unknown as TestRow[];
 
   const { data: subs } = await admin
     .from("submissions")
     .select("test_id, score, status");
-
   const byTest = new Map<string, Tally>();
   for (const s of subs ?? []) {
     const cur = byTest.get(s.test_id) ?? { done: [], open: 0 };
@@ -65,9 +61,6 @@ export default async function AdminResults() {
     ? Math.round((allScores.reduce((a, b) => a + b, 0) / allScores.length) * 10) / 10
     : 0;
   const liveCount = tests.filter(isLive).length;
-
-  // One section per class, in school order, newest test first within each.
-  // A class with no tests is left out; any class not in CLASSES goes last.
   const known: readonly string[] = CLASSES;
   const classes = [
     ...CLASSES,

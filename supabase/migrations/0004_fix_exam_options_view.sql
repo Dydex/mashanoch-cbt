@@ -1,8 +1,3 @@
--- exam_options must run with owner rights (students have no grant on the base
--- table, by design), so the row filter that RLS would have applied has to live
--- inside the view. security_barrier stops a cheap function in a user-supplied
--- WHERE clause from being evaluated before this filter.
-
 begin;
 
 drop view if exists public.exam_options;

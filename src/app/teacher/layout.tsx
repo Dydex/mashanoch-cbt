@@ -6,8 +6,6 @@ export default async function TeacherLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   const profile = await requireStaff();
-  // Admins keep their own sidebar here, so opening Tests does not strand them
-  // in the teacher area with no route back.
   const { nav, sections } = await staffNav(profile.role);
 
   return (

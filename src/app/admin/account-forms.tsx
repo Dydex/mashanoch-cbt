@@ -124,7 +124,6 @@ export function AddStudentForm() {
   );
 }
 
-/** The login details of a student just added. */
 export function Slip({ issued }: { issued: NonNullable<AdminState["issued"]> }) {
   return (
     <div className="mt-3 rounded-xl border-2 border-dashed border-[var(--primary)] bg-[var(--primary-soft)] p-4">

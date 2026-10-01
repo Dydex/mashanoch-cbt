@@ -13,16 +13,6 @@ export default function SetPasswordPage() {
   const [state, formAction, pending] = useActionState(setPassword, initial);
   const [ready, setReady] = useState(false);
 
-  /**
-   * Invite and recovery links can arrive two ways. If Supabase used the PKCE
-   * flow, /auth/callback already exchanged the code and there is a session.
-   * If it used the implicit flow the tokens are in the URL fragment, which the
-   * server never sees — so pick them up here and establish the session before
-   * the password can be changed.
-   *
-   * Both paths finish through the same promise, so `ready` is never set
-   * during the effect itself.
-   */
   useEffect(() => {
     const hash = new URLSearchParams(window.location.hash.slice(1));
     const access_token = hash.get("access_token");
@@ -36,7 +26,6 @@ export default function SetPasswordPage() {
               history.replaceState(null, "", window.location.pathname);
             })
         : Promise.resolve();
-
     session.finally(() => setReady(true));
   }, []);
 

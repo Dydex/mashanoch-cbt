@@ -14,7 +14,6 @@ export default async function StaffPage() {
     .neq("role", "student")
     .order("role")
     .order("full_name");
-
   const staff = staffRows ?? [];
 
   return (

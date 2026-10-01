@@ -31,21 +31,16 @@ export default function QuestionCard({
     image_url: string | null;
     options: Option[];
   };
-  /** True when the viewer may not change the paper: a student has started it, or they are an admin reviewing it. */
   locked?: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const [state, formAction, pending] = useActionState(updateQuestion, initial);
 
-  // Close the editor once a save comes back clean.
   useEffect(() => {
-    // The action state is an external form result; close the local editor after it resolves.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (editing && !pending && state && !state.error) setEditing(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state, pending]);
-
-  // Four fixed slots so a teacher can add or clear an option while editing.
   const slots = Array.from({ length: 4 }, (_, i) => question.options[i]);
   const correctIndex = question.options.findIndex((o) => o.is_correct);
 

@@ -12,7 +12,6 @@ export default function AddQuestionForm({ testId }: { testId: string }) {
   const [state, formAction, pending] = useActionState(addQuestion, initial);
   const formRef = useRef<HTMLFormElement>(null);
 
-  // Clear the form after a successful save so the teacher can keep typing.
   useEffect(() => {
     if (!pending && state && !state.error) formRef.current?.reset();
   }, [state, pending]);

@@ -1,15 +1,3 @@
--- Once a test has commenced, its paper is frozen.
---
--- Enforced with a trigger rather than RLS on purpose: the teacher UI writes
--- questions and options through the SERVICE ROLE (it must, because
--- `authenticated` has no grant on question_options.is_correct), and the service
--- role bypasses every RLS policy. A trigger is the only guard that still holds
--- on that path.
---
--- "Commenced" means now() >= test.start_time. Before that a teacher may edit
--- freely; from the moment the window opens the questions are fixed, so no
--- student can have the paper change underneath them mid-exam.
-
 begin;
 
 create or replace function public.reject_write_to_started_test()
@@ -26,8 +14,6 @@ begin
     where q.id = coalesce(new.question_id, old.question_id);
   end if;
 
-  -- Parent already gone: this is a cascade from deleting the question or the
-  -- whole test, not an edit. Let it through.
   if v_test_id is null then
     return coalesce(new, old);
   end if;

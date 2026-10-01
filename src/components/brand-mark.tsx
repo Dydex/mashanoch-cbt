@@ -8,14 +8,6 @@ const SIZES = {
   lg: "h-24 w-24",
 } as const;
 
-/**
- * The school crest, on a white chip so its black lettering stays legible
- * against the dark sidebar and hero panel.
- *
- * If public/logo.jpg is missing or fails to load, this renders the lettermark
- * badge — or nothing at all when `fallback` is "none" — rather than a broken
- * image icon.
- */
 export function BrandMark({
   size = "md",
   className = "",
@@ -23,11 +15,6 @@ export function BrandMark({
 }: {
   size?: keyof typeof SIZES;
   className?: string;
-  /**
-   * What to show when public/logo.jpg is missing. The sidebar needs something
-   * in that slot, but the sign-in hero already carries the school name in
-   * type, so an "M" badge there is just noise.
-   */
   fallback?: "lettermark" | "none";
 }) {
   const [failed, setFailed] = useState(false);
@@ -52,10 +39,6 @@ export function BrandMark({
                   rounded-xl bg-white p-1 shadow-[0_8px_24px_rgba(0,0,0,.25)] ${className}`}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      {/* The crest occupies only the middle of a 482x356 image and sits above
-          its centre, so scaling alone pushed it up and clipped the ribbon.
-          Scale trims the white margin; the nudge down re-centres the shield in
-          the chip. Both numbers are tuned to this artwork. */}
       <img
         src="/logo.jpg"
         alt="Mashanoch Private Schools"

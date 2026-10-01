@@ -1,6 +1,5 @@
 "use client";
 
-/** Opens the browser's print dialogue. Hidden on the printed page itself. */
 export default function PrintButton({ label = "Print" }: { label?: string }) {
   return (
     <button

@@ -5,10 +5,6 @@ import { removeStaff, type AdminState } from "./actions";
 
 const initial: AdminState = {};
 
-/**
- * Two-step: the first click asks for confirmation. Removing an account is not
- * undoable, so it should never be one stray click away.
- */
 export default function RemoveStaff({
   id,
   name,

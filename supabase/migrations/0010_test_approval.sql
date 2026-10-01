@@ -1,30 +1,5 @@
--- Tests need an admin's approval before students can see them.
---
--- Until now a test went live on its window alone: once start_time passed,
--- every student in the class could open it. Now it must also be approved.
---
---   draft              being written. The default for every new test.
---   pending            its teacher has submitted it; waiting on an admin
---   changes_requested  an admin sent it back with a note
---   approved           students may sit it while its window is open
---
--- Any change to a pending or approved test sends it back to draft, so what an
--- admin approved is always what students get. test_reviews keeps the
--- conversation: submissions, decisions and comments, oldest first.
---
--- Only server code (the service role) moves a test between these states. A
--- signed-in client can write the test table directly through the API, so a
--- trigger stops a teacher approving their own test that way.
-
 begin;
 
--- ---------------------------------------------------------------
--- 1. Approval status
--- ---------------------------------------------------------------
-
--- Tests that already exist were published under the old rules. Adding the
--- column with 'approved' backfills them, so nothing scheduled or live
--- disappears from students; new tests then default to draft.
 alter table public.test
   add column if not exists approval_status text not null default 'approved';
 alter table public.test
@@ -36,20 +11,14 @@ alter table public.test add constraint test_approval_status_check
 
 create index if not exists test_approval_status_idx on public.test (approval_status);
 
--- ---------------------------------------------------------------
--- 2. Review thread
--- ---------------------------------------------------------------
-
 create table if not exists public.test_reviews (
   id         uuid primary key default gen_random_uuid(),
   test_id    uuid not null references public.test (id) on delete cascade,
-  -- Kept when the author's account is removed; the entry just loses its name.
   author_id  uuid references public.profiles (id) on delete set null,
   kind       text not null
     check (kind in ('submitted', 'approved', 'changes_requested', 'comment')),
   body       text check (length(body) <= 2000),
   created_at timestamptz not null default now(),
-  -- A comment or a request for changes is nothing without its note.
   constraint test_reviews_body_required
     check (kind in ('submitted', 'approved') or length(btrim(coalesce(body, ''))) > 0)
 );
@@ -59,7 +28,6 @@ create index if not exists test_reviews_author_idx on public.test_reviews (autho
 
 alter table public.test_reviews enable row level security;
 
--- Readable by the test's owner and by admins. Written only by server code.
 drop policy if exists "test_reviews_select_owner" on public.test_reviews;
 create policy "test_reviews_select_owner" on public.test_reviews for select
   using (public.owns_test(test_id));
@@ -67,10 +35,6 @@ create policy "test_reviews_select_owner" on public.test_reviews for select
 revoke all on public.test_reviews from anon, authenticated;
 grant select on public.test_reviews to authenticated;
 grant all on public.test_reviews to service_role;
-
--- ---------------------------------------------------------------
--- 3. Students only ever see approved tests
--- ---------------------------------------------------------------
 
 drop policy if exists "test_select_student" on public.test;
 create policy "test_select_student" on public.test for select
@@ -106,9 +70,6 @@ create policy "options_select_student" on public.question_options for select
         and now() >= t.start_time and now() <= t.end_time
     )
   );
-
--- start_test and can_write_answer are SECURITY DEFINER, so the policies above
--- do not reach them. Each gets the same check.
 
 create or replace function public.start_test(p_test_id uuid)
 returns uuid language plpgsql security definer set search_path = public, pg_temp as $$
@@ -150,18 +111,6 @@ returns boolean language sql stable security definer set search_path = public, p
   )
 $$;
 
--- ---------------------------------------------------------------
--- 4. The paper freezes when an APPROVED test opens
--- ---------------------------------------------------------------
--- 0008 froze questions at start_time. Only an approved test can have been
--- sat, though, and an unapproved one may pass its start time while an admin
--- is still reviewing it. Its teacher must still be able to fix it, so the
--- freeze now applies to approved tests only.
---
--- Any other change to a pending or approved paper sends the test back to
--- draft. The triggers on questions and question_options from 0008 stay
--- attached; only the function behind them changes.
-
 create or replace function public.reject_write_to_started_test()
 returns trigger language plpgsql security definer set search_path = public, pg_temp as $$
 declare
@@ -177,8 +126,6 @@ begin
     where q.id = coalesce(new.question_id, old.question_id);
   end if;
 
-  -- Parent already gone: this is a cascade from deleting the question or the
-  -- whole test, not an edit. Let it through.
   if v_test_id is null then
     return coalesce(new, old);
   end if;
@@ -202,14 +149,6 @@ begin
   return coalesce(new, old);
 end $$;
 
--- ---------------------------------------------------------------
--- 5. Clients cannot approve tests
--- ---------------------------------------------------------------
--- test_insert_staff and test_update_owner let a teacher write this table with
--- their own token. Without this trigger, one PATCH could set approval_status
--- to 'approved'. Server code runs as service_role, and the trigger in section
--- 4 runs as the table owner. Both are trusted and pass straight through.
-
 create or replace function public.guard_test_approval()
 returns trigger language plpgsql set search_path = public, pg_temp as $$
 begin
@@ -227,7 +166,6 @@ begin
       using errcode = 'insufficient_privilege';
   end if;
 
-  -- Handing a test to another owner is not an edit to the paper.
   if (to_jsonb(new) - array['created_by', 'updated_at'])
      is distinct from (to_jsonb(old) - array['created_by', 'updated_at']) then
     if old.approval_status = 'approved' and now() >= old.start_time then

@@ -21,26 +21,19 @@ export default async function StudentsPage({
   const { class: klass = "", q = "" } = await searchParams;
   await requireAdmin();
   const admin = createAdminClient();
-
   const term = q.trim();
-  // Commas and brackets are syntax inside a PostgREST or() filter; a search
-  // term containing them would break the query rather than match anything.
   const safeTerm = term.replace(/[,()]/g, "");
 
   let query = admin
     .from("profiles")
     .select("id, username, full_name, first_name, last_name, class")
     .eq("role", "student");
-
   if (klass) query = query.eq("class", klass);
   if (safeTerm)
     query = query.or(`full_name.ilike.%${safeTerm}%,username.ilike.%${safeTerm}%`);
-
   const { data } = await query.order("class").order("full_name");
   const students = data ?? [];
 
-  // Grouped by class so a whole form can be found at a glance. `next` is the
-  // class each one is promoted into at the end of the session.
   const byClass = CLASSES.map((c, i) => ({
     name: c,
     next: CLASSES[i + 1] ?? null,

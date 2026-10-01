@@ -1,13 +1,5 @@
 import type { Tone } from "@/components/ui";
 
-/**
- * Where a test is in the approval workflow (0010_test_approval.sql).
- *
- *   draft              being written; students cannot see it
- *   pending            submitted by its teacher, waiting on an admin
- *   changes_requested  an admin sent it back with a note
- *   approved           students may sit it while its window is open
- */
 export type ApprovalStatus =
   | "draft"
   | "pending"
@@ -20,13 +12,6 @@ type Timed = {
   end_time: string;
 };
 
-/**
- * The status shown for a test on every staff screen.
- *
- * Approval comes first: until a test is approved its window means nothing,
- * because students cannot see it. Only an approved test is Scheduled, Live or
- * Closed.
- */
 export function testStatus(test: Timed): { label: string; tone: Tone } {
   switch (test.approval_status) {
     case "draft":
@@ -45,7 +30,6 @@ export function testStatus(test: Timed): { label: string; tone: Tone } {
   return { label: "Live now", tone: "success" };
 }
 
-/** True while students can actually open the test. */
 export function isLive(test: Timed): boolean {
   const now = Date.now();
   return (
@@ -55,15 +39,6 @@ export function isLive(test: Timed): boolean {
   );
 }
 
-/**
- * True once the paper is frozen: the test is approved and at least one
- * student has started it, so the questions cannot change underneath them.
- * Before anyone starts, even a live test can still be fixed.
- *
- * Database triggers enforce this for real (0008, amended by 0010 and 0015).
- * This only decides what the UI offers, and lets actions return a readable
- * message.
- */
 export function isLocked(
   test: Pick<Timed, "approval_status">,
   submissions: number,
@@ -71,12 +46,10 @@ export function isLocked(
   return test.approval_status === "approved" && submissions > 0;
 }
 
-/** True once the window's opening time has passed, approved or not. */
 export function hasStarted(test: Pick<Timed, "start_time">): boolean {
   return Date.now() >= new Date(test.start_time).getTime();
 }
 
-/** True once the window's closing time has passed. */
 export function isClosed(test: Pick<Timed, "end_time">): boolean {
   return Date.now() > new Date(test.end_time).getTime();
 }

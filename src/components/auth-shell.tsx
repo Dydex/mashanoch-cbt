@@ -1,11 +1,6 @@
 import type { ReactNode } from "react";
 import { BrandMark } from "@/components/brand-mark";
 
-/**
- * Split-screen shell for the two sign-in surfaces. Students and staff get the
- * same frame and differ only in the label on the hero panel and the link
- * beneath the card, so neither page can drift away from the other.
- */
 export function AuthShell({
   label,
   sublabel,
@@ -22,8 +17,6 @@ export function AuthShell({
       <aside
         className="relative hidden w-[45%] shrink-0 flex-col justify-between overflow-hidden p-12 lg:flex"
         style={{
-          // The crest's charcoal over the photo, deepening towards the foot of
-          // the panel so the label below stays readable.
           backgroundImage:
             "linear-gradient(to bottom, rgba(28,31,38,0.72) 0%, rgba(28,31,38,0.78) 45%, rgba(14,16,20,0.95) 100%), " +
             "linear-gradient(115deg, rgba(176,18,26,0.35) 0%, rgba(176,18,26,0) 55%), " +

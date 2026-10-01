@@ -14,8 +14,6 @@ export default async function ExamPage({
   const profile = await requireStudent();
   const supabase = await createClient();
 
-  // RLS only returns this row if the student's class matches and the window
-  // is open, so an out-of-window test can never be loaded here.
   const { data: test } = await supabase
     .from("test")
     .select(
@@ -23,11 +21,8 @@ export default async function ExamPage({
     )
     .eq("id", testId)
     .maybeSingle();
-
   if (!test) redirect("/exam");
 
-  // Opens the submission, or returns the existing one. Enforces class,
-  // role and window server-side a second time.
   const { data: submissionId, error: startError } = await supabase.rpc(
     "start_test",
     { p_test_id: testId },
@@ -44,8 +39,6 @@ export default async function ExamPage({
     ? test.subjects[0]?.name
     : (test.subjects as { name: string } | null)?.name;
 
-  /* ---------- already handed in ---------- */
-  // Students are not shown their score; their teacher shares results.
   if (submission?.status === "submitted") {
     return (
       <div className="mx-auto max-w-lg pt-10">
@@ -90,17 +83,13 @@ export default async function ExamPage({
     );
   }
 
-  /* ---------- sit the test ---------- */
   const { data: questions } = await supabase
     .from("questions")
     .select("id, question_text, image_url, order_index")
     .eq("test_id", testId)
     .order("order_index");
-
   const ids = (questions ?? []).map((q) => q.id);
 
-  // exam_options is the view without is_correct — the answer key is never
-  // sent to the browser.
   const { data: options } = await supabase
     .from("exam_options")
     .select("id, question_id, option_text")
@@ -110,7 +99,6 @@ export default async function ExamPage({
     .from("answers")
     .select("question_id, selected_option_id")
     .eq("submission_id", submissionId);
-
   const byQuestion = new Map<string, { id: string; option_text: string }[]>();
   for (const o of options ?? []) {
     const list = byQuestion.get(o.question_id) ?? [];
@@ -121,7 +109,6 @@ export default async function ExamPage({
   const startedAt = new Date(submission!.started_at).getTime();
   const personalDeadline = startedAt + test.duration_minutes * 60_000;
   const windowClose = new Date(test.end_time).getTime();
-  // Whichever comes first: the student's own clock, or the exam closing.
   const deadline = Math.min(personalDeadline, windowClose);
 
   return (

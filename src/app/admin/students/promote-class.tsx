@@ -8,17 +8,12 @@ const quiet =
   "rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-medium " +
   "text-[var(--text-muted)] transition hover:border-[var(--border-strong)] hover:text-[var(--text)]";
 
-/**
- * Moves a whole class up a year at the end of the session. Two-step: it
- * changes which tests every student in the class can see.
- */
 export default function PromoteClass({
   klass,
   next,
   count,
 }: {
   klass: string;
-  /** The class they move up to, or null if this is the final class. */
   next: string | null;
   count: number;
 }) {

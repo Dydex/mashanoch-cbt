@@ -10,7 +10,6 @@ import {
 
 const initial: StaffState = {};
 
-/** 3725 seconds as "1:02:05", 125 as "2:05". */
 function formatCountdown(totalSeconds: number): string {
   const h = Math.floor(totalSeconds / 3600);
   const m = Math.floor((totalSeconds % 3600) / 60);
@@ -19,13 +18,7 @@ function formatCountdown(totalSeconds: number): string {
 }
 
 export default function ForgotPasswordPage() {
-  // Controlled, so the address is still there to resend to: React clears
-  // uncontrolled fields after every form action.
   const [email, setEmail] = useState("");
-
-  // When the latest link was sent, and the clock both countdowns read. Each is
-  // set outside render (in the action, and by the interval below), which
-  // keeps rendering pure.
   const [sentAt, setSentAt] = useState<number | null>(null);
   const [now, setNow] = useState(0);
 
@@ -47,14 +40,9 @@ export default function ForgotPasswordPage() {
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, [sentAt]);
-
   const sent = sentAt !== null;
   const elapsed = sent ? Math.floor((now - sentAt) / 1000) : 0;
   const expiresIn = Math.max(0, RESET_LINK_TTL_SECONDS - elapsed);
-  // Supabase will not send another reset email to the same address this
-  // soon. The action hides that refusal (it would reveal which addresses
-  // exist), so without this wait a resend would restart the countdown for a
-  // link that never went out.
   const resendIn = Math.max(0, RESET_RESEND_COOLDOWN_SECONDS - elapsed);
   const expired = sent && expiresIn === 0;
 

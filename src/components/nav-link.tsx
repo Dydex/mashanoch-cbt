@@ -4,10 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 
-/**
- * Sidebar link that highlights itself from the current path, so every area
- * gets correct active state without each layout having to work it out.
- */
 export function NavLink({
   href,
   label,
@@ -20,7 +16,6 @@ export function NavLink({
   label: string;
   icon: ReactNode;
   badge?: number | string;
-  /** Exact match by default; set false to stay lit on nested routes. */
   exact?: boolean;
   collapsed?: boolean;
 }) {
@@ -31,8 +26,7 @@ export function NavLink({
     <Link
       href={href}
       aria-current={active ? "page" : undefined}
-      // The label is still in the DOM when collapsed, just visually hidden, so
-      // screen readers and the accessible name are unaffected by the toggle.
+
       title={collapsed ? label : undefined}
       className={`flex items-center rounded-lg py-2.5 text-sm transition ${
         collapsed ? "justify-center px-0" : "gap-3 px-3"
@@ -59,7 +53,6 @@ export function NavLink({
   );
 }
 
-/** Compact variant for the mobile bottom bar. */
 export function MobileNavLink({
   href,
   label,

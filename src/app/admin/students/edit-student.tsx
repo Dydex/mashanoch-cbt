@@ -8,13 +8,6 @@ const field =
   "min-w-0 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 " +
   "text-xs outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--ring)]";
 
-/**
- * Corrects one student's first name, last name, admission number and class,
- * inline in their row. Changing the last name changes their password, which
- * is their surname; changing the class is how a repeating student is put
- * back after a promotion. Fields are controlled so a refused save keeps what
- * was typed, rather than React clearing the form.
- */
 export default function EditStudent({
   id,
   firstName,

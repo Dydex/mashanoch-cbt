@@ -12,13 +12,6 @@ const field =
 const button =
   "rounded-lg px-4 py-2 text-sm font-semibold transition disabled:opacity-60";
 
-/*
- * Both notes are controlled rather than left to the form. React resets
- * uncontrolled fields after every action, including one that was refused, and
- * a long note should survive being told to add something. Each is cleared
- * only once its action succeeds.
- */
-
 function Feedback({ state }: { state: { error?: string; notice?: string } }) {
   if (state.error)
     return (
@@ -35,13 +28,11 @@ function Feedback({ state }: { state: { error?: string; notice?: string } }) {
   return null;
 }
 
-/** The teacher's side: hand the test to the admins, with an optional note. */
 export function SubmitForm({
   testId,
   resubmit,
 }: {
   testId: string;
-  /** True if it has been submitted before, e.g. after changes were requested. */
   resubmit: boolean;
 }) {
   const [note, setNote] = useState("");
@@ -90,7 +81,6 @@ export function SubmitForm({
   );
 }
 
-/** The admin's side: approve, send back with a note, or just comment. */
 export function ReviewForm({
   testId,
   submissionId,
@@ -98,7 +88,6 @@ export function ReviewForm({
   canSendBack,
 }: {
   testId: string;
-  /** The latest submission this page showed; see reviewTest. */
   submissionId: string;
   canApprove: boolean;
   canSendBack: boolean;

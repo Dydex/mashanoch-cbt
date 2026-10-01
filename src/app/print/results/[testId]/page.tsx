@@ -15,14 +15,6 @@ type Row = {
   profiles: { full_name: string; username: string } | null;
 };
 
-/**
- * A printable results sheet for one test: every student, their score and
- * their percentage, with the class summary underneath.
- *
- * Outside /admin and /teacher on purpose, so it is not wrapped in the app
- * shell and prints as plain black on white. Open to the test's teacher and to
- * admins, the same as the results page it is printed from.
- */
 export default async function PrintResults({
   params,
 }: {
@@ -39,7 +31,6 @@ export default async function PrintResults({
     )
     .eq("id", testId)
     .single();
-
   if (!test) notFound();
 
   const { data } = await admin
@@ -47,7 +38,6 @@ export default async function PrintResults({
     .select("id, score, status, submitted_at, profiles(full_name, username)")
     .eq("test_id", testId)
     .order("score", { ascending: false, nullsFirst: false });
-
   const rows = (data ?? []) as unknown as Row[];
   const done = rows.filter((r) => r.status === "submitted");
   const subject = Array.isArray(test.subjects)

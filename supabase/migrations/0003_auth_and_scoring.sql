@@ -1,11 +1,5 @@
--- Mashnock CBT — account provisioning and server-side scoring.
-
 begin;
 
--- ---------------------------------------------------------------
--- Profile is created automatically when an admin provisions an
--- auth user. Username/full_name/role/class come from user metadata.
--- ---------------------------------------------------------------
 create or replace function public.handle_new_user()
 returns trigger language plpgsql security definer set search_path = public, pg_temp as $$
 begin
@@ -26,9 +20,6 @@ create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
 
--- ---------------------------------------------------------------
--- start_test: opens (or resumes) a student's submission.
--- ---------------------------------------------------------------
 create or replace function public.start_test(p_test_id uuid)
 returns uuid language plpgsql security definer set search_path = public, pg_temp as $$
 declare
@@ -52,9 +43,6 @@ begin
   return v_id;
 end $$;
 
--- ---------------------------------------------------------------
--- submit_test: grades server-side. The client never supplies a score.
--- ---------------------------------------------------------------
 create or replace function public.submit_test(p_submission_id uuid)
 returns table (score integer, total_questions integer)
 language plpgsql security definer set search_path = public, pg_temp as $$

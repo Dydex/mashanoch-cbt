@@ -6,15 +6,6 @@ import PrintButton from "@/components/print-button";
 
 export const metadata = { title: "Student login list" };
 
-/**
- * A plain list of students to print before a test: first name, surname and
- * admission number, one table per class. Students sign in with their
- * admission number, and their surname is their password, so this is all the
- * exam officer needs to hand out or read from.
- *
- * Lives outside /admin on purpose, so it is not wrapped in the app shell and
- * prints as plain black on white with no sidebar or top bar.
- */
 export default async function PrintStudentList({
   searchParams,
 }: {
@@ -31,8 +22,6 @@ export default async function PrintStudentList({
   if (klass) query = query.eq("class", klass);
   const { data } = await query;
   const students = data ?? [];
-
-  // One table per class, in school order (JSS1 first), sorted by surname.
   const known: readonly string[] = CLASSES;
   const classes = [
     ...CLASSES,

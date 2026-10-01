@@ -1,11 +1,3 @@
--- Replace the SECURITY DEFINER view (flagged Critical by the Supabase linter)
--- with column-level grants + an invoker-rights view.
---
--- is_correct is simply never granted to any client role, so it cannot be
--- selected even from the base table. Row filtering goes back to the existing
--- RLS policies on question_options — one source of truth, no duplicated
--- predicate inside a view definition.
-
 begin;
 
 grant select (id, question_id, option_text, created_at)

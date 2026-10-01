@@ -13,14 +13,9 @@ export type NavItem = {
   label: string;
   icon: ReactNode;
   badge?: number | string;
-  /** Exact path match by default; false keeps it lit on nested routes. */
   exact?: boolean;
 };
 
-/**
- * Sidebar + topbar shell shared by the staff and student areas.
- * Server component — the only interactive part is the sign-out form.
- */
 export async function AppShell({
   profile,
   nav,
@@ -45,7 +40,7 @@ export async function AppShell({
       />
 
       <div className="flex min-w-0 flex-1 flex-col">
-        {/* ---------------- Topbar ---------------- */}
+        
         <header className="sticky top-0 z-20 border-b border-[var(--border)] bg-[var(--surface)]/85 backdrop-blur-xl print:hidden">
           <div className="flex h-[68px] items-center justify-between gap-4 px-5 lg:px-8">
             <Link href="/" className="flex items-center gap-2.5 lg:hidden">

@@ -22,9 +22,6 @@ export default async function ResultsPage({
 }) {
   const { testId } = await params;
   await requireTestViewer(testId);
-
-  // Service role: scores and per-question correctness are not readable by
-  // `authenticated`, by design. Ownership was checked above.
   const admin = createAdminClient();
 
   const { data: test } = await admin
@@ -32,7 +29,6 @@ export default async function ResultsPage({
     .select("id, title, class, term, session, marks_per_question, subjects(name)")
     .eq("id", testId)
     .single();
-
   if (!test) notFound();
 
   const { data: questions } = await admin
@@ -49,14 +45,11 @@ export default async function ResultsPage({
     )
     .eq("test_id", testId)
     .order("score", { ascending: false, nullsFirst: false });
-
   const submissions = (rows ?? []) as unknown as SubmissionRow[];
   const done = submissions.filter((s) => s.status === "submitted");
   const inProgress = submissions.filter((s) => s.status === "in_progress");
-
   const questionList = questions ?? [];
   const maxMarks = questionList.length * test.marks_per_question;
-
   const scores = done.map((s) => s.score ?? 0);
   const average = scores.length
     ? Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 10) / 10
@@ -66,12 +59,10 @@ export default async function ResultsPage({
   const passMark = maxMarks / 2;
   const passed = scores.filter((s) => s >= passMark).length;
 
-  // Per-question difficulty: how many who answered it got it right.
   const { data: answers } = await admin
     .from("answers")
     .select("question_id, is_correct")
     .in("submission_id", done.length ? done.map((s) => s.id) : ["00000000-0000-0000-0000-000000000000"]);
-
   const stats = new Map<string, { right: number; total: number }>();
   for (const a of answers ?? []) {
     const cur = stats.get(a.question_id) ?? { right: 0, total: 0 };

@@ -1,13 +1,4 @@
--- Mashnock CBT — schema hardening
--- Fixes: profiles RLS recursion, answer-key leakage, missing profile creation,
--- client-writable scores, unbounded exam-window writes, missing FK indexes.
-
 begin;
-
--- ---------------------------------------------------------------
--- 1. Role helpers (SECURITY DEFINER — these bypass RLS on profiles,
---    which is what breaks the recursion in the old policies).
--- ---------------------------------------------------------------
 
 create or replace function public.my_role()
 returns text language sql stable security definer set search_path = public, pg_temp as $$
@@ -37,8 +28,6 @@ returns boolean language sql stable security definer set search_path = public, p
   )
 $$;
 
--- A student may only write answers inside the test window AND inside their
--- own personal duration clock, and only while the submission is open.
 create or replace function public.can_write_answer(p_submission_id uuid)
 returns boolean language sql stable security definer set search_path = public, pg_temp as $$
   select exists (
@@ -57,10 +46,6 @@ $$;
 grant execute on function public.my_role, public.my_class, public.is_admin,
   public.is_staff, public.owns_test(uuid), public.can_write_answer(uuid) to authenticated;
 
--- ---------------------------------------------------------------
--- 2. Schema additions
--- ---------------------------------------------------------------
-
 alter table public.test
   add column if not exists marks_per_question integer not null default 2
     check (marks_per_question > 0);
@@ -68,21 +53,14 @@ alter table public.test
 alter table public.questions
   add column if not exists order_index integer not null default 0;
 
--- Deterministic question order.
 create unique index if not exists questions_test_order_key
   on public.questions (test_id, order_index);
 
--- At most one correct option per question.
 create unique index if not exists question_options_one_correct
   on public.question_options (question_id) where is_correct;
 
--- The test window must be coherent.
 alter table public.test drop constraint if exists test_window_check;
 alter table public.test add constraint test_window_check check (end_time > start_time);
-
--- ---------------------------------------------------------------
--- 3. Foreign-key indexes (Postgres does not create these itself)
--- ---------------------------------------------------------------
 
 create index if not exists questions_test_id_idx          on public.questions (test_id);
 create index if not exists question_options_question_idx  on public.question_options (question_id);

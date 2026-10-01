@@ -29,7 +29,6 @@ export default function ExamRunner({
 }) {
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
-
   const [index, setIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>(initialAnswers);
   const [flagged, setFlagged] = useState<Set<string>>(new Set());
@@ -39,11 +38,8 @@ export default function ExamRunner({
   const [remaining, setRemaining] = useState(() =>
     Math.max(0, deadline - Date.now()),
   );
-
-  // Total span is fixed on mount so the ring measures against a stable whole.
   const [totalDuration] = useState(() => Math.max(1, deadline - Date.now()));
   const submittedRef = useRef(false);
-
   const question = questions[index];
   const answeredCount = Object.keys(answers).length;
 
@@ -63,7 +59,6 @@ export default function ExamRunner({
     router.refresh();
   }, [router, submissionId, supabase]);
 
-  /* ---------- countdown, auto-submits at zero ---------- */
   useEffect(() => {
     const id = setInterval(() => {
       const left = Math.max(0, deadline - Date.now());
@@ -73,23 +68,16 @@ export default function ExamRunner({
     return () => clearInterval(id);
   }, [deadline, submit]);
 
-  /* ---------- answer autosave ---------- */
   async function choose(questionId: string, optionId: string) {
     setAnswers((prev) => ({ ...prev, [questionId]: optionId }));
     setSaving(true);
     setError(null);
 
-    // Goes through save_answer() rather than writing the table directly: a
-    // PostgREST upsert would need UPDATE on every column, which would undo the
-    // grant that stops a student moving an answer onto another submission.
-    // The function also checks the option really belongs to this question.
-    // is_correct is never sent — grading happens in submit_test().
     const { error } = await supabase.rpc("save_answer", {
       p_submission_id: submissionId,
       p_question_id: questionId,
       p_option_id: optionId,
     });
-
     setSaving(false);
     if (error) setError("Could not save that answer. Check your connection.");
   }
@@ -119,7 +107,7 @@ export default function ExamRunner({
 
   return (
     <div className="mx-auto max-w-6xl">
-      {/* ---------------- header ---------------- */}
+      
       <header className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-xl font-semibold tracking-tight">
@@ -149,7 +137,7 @@ export default function ExamRunner({
       )}
 
       <div className="grid gap-5 lg:grid-cols-[1fr_300px]">
-        {/* ---------------- question ---------------- */}
+        
         <section>
           <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow)] sm:p-8">
             <h2 className="text-base font-semibold">Question {index + 1}</h2>
@@ -226,7 +214,7 @@ export default function ExamRunner({
           </div>
         </section>
 
-        {/* ---------------- navigator ---------------- */}
+        
         <aside className="lg:sticky lg:top-24 lg:self-start">
           <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow)]">
             <div className="flex items-baseline justify-between">

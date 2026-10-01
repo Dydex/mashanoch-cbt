@@ -8,7 +8,6 @@ export type ReviewEntry = {
   kind: "submitted" | "approved" | "changes_requested" | "comment";
   body: string | null;
   created_at: string;
-  /** Null once the author's account has been removed. */
   author: { full_name: string } | null;
 };
 
@@ -19,7 +18,6 @@ const VERB: Record<ReviewEntry["kind"], string> = {
   comment: "commented",
 };
 
-/** Colours the note's edge, so a request for changes stands out. */
 const ACCENT: Record<ReviewEntry["kind"], string> = {
   submitted: "border-[var(--border-strong)]",
   approved: "border-[var(--success)]",
@@ -30,9 +28,7 @@ const ACCENT: Record<ReviewEntry["kind"], string> = {
 type Situation = {
   status: ApprovalStatus;
   isAdmin: boolean;
-  /** The viewer created this test. */
   own: boolean;
-  /** Approved and its window has opened. */
   locked: boolean;
   closed: boolean;
   startLabel: string;
@@ -63,11 +59,6 @@ function summary(s: Situation): string {
   }
 }
 
-/**
- * Where the test stands in the approval workflow, and the thread of
- * submissions, decisions and comments behind it. Teachers and admins read the
- * same thread. `children` is whatever the viewer can do from here.
- */
 export default function ApprovalPanel({
   entries,
   children,

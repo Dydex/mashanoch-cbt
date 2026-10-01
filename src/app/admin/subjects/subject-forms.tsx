@@ -63,7 +63,6 @@ export function AddSubjectForm() {
   );
 }
 
-/** One subject: rename it, or remove it while no test uses it. */
 export function SubjectRow({
   id,
   name,
@@ -86,7 +85,6 @@ export function SubjectRow({
     initial,
   );
   const [deleteState, remove, removing] = useActionState(deleteSubject, initial);
-
   const error = renameState.error ?? deleteState.error;
 
   return (

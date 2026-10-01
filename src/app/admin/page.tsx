@@ -51,7 +51,6 @@ export default async function AdminDashboard() {
   const classCount = new Set(
     (classRows ?? []).map((r) => r.class).filter(Boolean),
   ).size;
-
   const staff = staffRows ?? [];
   const teacherCount = staff.filter((p) => p.role === "teacher").length;
   const adminCount = staff.filter((p) => p.role === "admin").length;

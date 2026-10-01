@@ -5,10 +5,6 @@ import { removeStudent, type AdminState } from "../actions";
 
 const initial: AdminState = {};
 
-/**
- * Removes one student. Two-step, because it also deletes everything they
- * have sat and cannot be undone.
- */
 export default function RemoveStudent({
   id,
   name,

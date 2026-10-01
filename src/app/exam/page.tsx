@@ -23,7 +23,6 @@ export default async function ExamHome() {
   const profile = await requireStudent();
   const supabase = await createClient();
 
-  // RLS returns only tests for this student's class whose window is open.
   const { data: testRows } = await supabase
     .from("test")
     .select(
@@ -31,10 +30,8 @@ export default async function ExamHome() {
         " start_time, end_time, subjects(name), questions(count)",
     )
     .order("end_time");
-
   const tests = (testRows ?? []) as unknown as OpenTest[];
 
-  // Status only: students are not shown their scores.
   const { data: submissions } = await supabase
     .from("submissions")
     .select("test_id, status");
@@ -42,7 +39,6 @@ export default async function ExamHome() {
   const byTest = new Map(
     (submissions ?? []).map((s) => [s.test_id as string, s]),
   );
-
   const firstName = profile.full_name.split(/\s+/)[0];
 
   return (

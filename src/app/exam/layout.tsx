@@ -6,7 +6,6 @@ export default async function ExamLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   const profile = await requireStudent();
 
-  // No results link: students are not shown their scores.
   return (
     <AppShell
       profile={profile}

@@ -3,11 +3,6 @@
 import { useState } from "react";
 import { deleteTest } from "../actions";
 
-/**
- * Deletes a test with its questions and approval thread. Two-step, and only
- * offered while nobody has sat it: the server refuses once there are
- * submissions, because those are the school's record of results.
- */
 export default function DeleteTest({
   testId,
   title,

@@ -36,12 +36,9 @@ export default async function AuthorTestPage({
 }: {
   params: Promise<{ testId: string }>;
 }) {
-  const { testId } = await params; // params is a Promise in Next 16
+  const { testId } = await params;
   const profile = await requireTestViewer(testId);
   const isAdmin = profile.role === "admin";
-
-  // Service role: the teacher needs to see which option is correct, and
-  // `authenticated` has no grant on is_correct. Access checked above.
   const admin = createAdminClient();
 
   const { data: test } = await admin
@@ -51,7 +48,6 @@ export default async function AuthorTestPage({
     )
     .eq("id", testId)
     .single();
-
   if (!test) notFound();
 
   const [
@@ -82,7 +78,6 @@ export default async function AuthorTestPage({
   const subject = Array.isArray(test.subjects)
     ? test.subjects[0]?.name
     : (test.subjects as { name: string } | null)?.name;
-
   const list = questions ?? [];
   const sat = submissionCount ?? 0;
   const total = list.length * test.marks_per_question;
@@ -90,14 +85,7 @@ export default async function AuthorTestPage({
   const status = testStatus(test);
   const own = test.created_by === profile.id;
   const closed = isClosed(test);
-
-  // The paper freezes once a student has started: until then even a live test
-  // can still be fixed. Database triggers enforce this for real (0008, 0010,
-  // 0015); this only decides what the UI offers.
   const locked = isLocked(test, sat);
-
-  // Admins review papers and never change them (requireTestOwner refuses
-  // them on every write).
   const canEdit = !isAdmin && !locked;
 
   const entries: ReviewEntry[] = (reviews ?? []).map((r) => ({
@@ -108,8 +96,6 @@ export default async function AuthorTestPage({
     author: (Array.isArray(r.author) ? r.author[0] : r.author) ?? null,
   }));
 
-  // The submission an admin's approval refers to. reviewTest refuses it if the
-  // teacher has resubmitted since, so nobody approves a paper they haven't seen.
   const latestSubmission =
     entries.filter((e) => e.kind === "submitted").at(-1)?.id ?? "";
 

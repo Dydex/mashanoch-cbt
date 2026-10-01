@@ -1,8 +1,5 @@
 import type { ReactNode } from "react";
 
-/* Small presentational primitives shared across the staff surfaces.
-   Server components — no hooks, no client bundle cost. */
-
 export function Avatar({
   name,
   size = "md",
@@ -84,10 +81,6 @@ export function Card({
   );
 }
 
-/**
- * A page's masthead: the school's charcoal band with a crimson rule, used at
- * the top of every staff surface so they read as one site.
- */
 export function PageHeader({
   title,
   subtitle,
@@ -154,8 +147,6 @@ export function StatCard({
     </Card>
   );
 }
-
-/* ---------------- icons (inline, no dependency) ---------------- */
 
 const s = {
   width: 18,

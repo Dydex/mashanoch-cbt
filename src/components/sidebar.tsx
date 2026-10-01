@@ -6,13 +6,6 @@ import type { NavItem } from "@/components/shell";
 import { SIDEBAR_COOKIE } from "@/lib/constants";
 import { BrandMark } from "@/components/brand-mark";
 
-/**
- * Desktop sidebar with a collapse toggle.
- *
- * The choice is kept in a cookie rather than localStorage so the server
- * already knows it and renders the right width first time — no flash of an
- * expanded sidebar collapsing after hydration.
- */
 export function Sidebar({
   nav,
   sections,
@@ -29,7 +22,6 @@ export function Sidebar({
   function toggle() {
     const next = !collapsed;
     setCollapsed(next);
-    // A year, path-wide, lax: it is a display preference, nothing sensitive.
     document.cookie = `${SIDEBAR_COOKIE}=${next ? "1" : "0"}; path=/; max-age=31536000; samesite=lax`;
   }
 
@@ -41,7 +33,7 @@ export function Sidebar({
                     collapsed ? "w-[76px]" : "w-[272px]"
                   }`}
     >
-      {/* brand + toggle */}
+      
       <div
         className={`flex items-center border-b border-white/10 py-6 ${
           collapsed ? "flex-col gap-4 px-3" : "gap-3 px-6"

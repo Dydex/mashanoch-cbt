@@ -1,20 +1,9 @@
--- Classify tests by term and academic session.
---
--- Until now this lived in the title ("First Term Mathematics"), which cannot
--- be filtered, grouped or validated, and silently fails to group the moment
--- someone types "1st Term Maths".
---
--- Session rather than year: a Nigerian academic session runs across two
--- calendar years (September to July), so a January paper belongs to the
--- session that began the previous September. A plain year cannot express that.
-
 begin;
 
 alter table public.test
   add column if not exists term text,
   add column if not exists session text;
 
--- Backfill before adding the constraints, so existing rows stay valid.
 update public.test
    set term = coalesce(term, 'First'),
        session = coalesce(
@@ -37,7 +26,6 @@ alter table public.test drop constraint if exists test_term_check;
 alter table public.test add constraint test_term_check
   check (term in ('First', 'Second', 'Third'));
 
--- e.g. 2026/2027
 alter table public.test drop constraint if exists test_session_check;
 alter table public.test add constraint test_session_check
   check (session ~ '^\d{4}/\d{4}$');

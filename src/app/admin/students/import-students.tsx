@@ -10,11 +10,6 @@ const TEMPLATE = `first_name,last_name,admission_no,class
 Ada,Obi,MPS/2026/001,${CLASSES[0]}
 Musa,Bello,MPS/2026/002,${CLASSES[1] ?? CLASSES[0]}`;
 
-/**
- * Adds a list of students from a spreadsheet saved as CSV. Every row is
- * checked first; rows that cannot be used are reported and skipped, so one
- * bad line never stops the rest.
- */
 export default function ImportStudents() {
   const [state, action, pending] = useActionState(importStudents, initial);
 

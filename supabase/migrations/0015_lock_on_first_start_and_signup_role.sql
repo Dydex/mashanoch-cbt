@@ -1,21 +1,4 @@
--- Two changes: when a paper freezes, and where a new account's role comes from.
---
--- 1. The paper froze when an approved test's window opened (0008, 0010). That
---    is earlier than it needs to be: until somebody actually starts, nothing
---    can change underneath anyone. Now it freezes when the first student
---    starts, so a teacher can still fix a live test nobody has begun.
---
--- 2. handle_new_user (0003) read the new account's role from user metadata,
---    which is whatever the signup request supplied. With public signups off
---    that was unreachable; if they were ever switched on, anyone could have
---    signed up as an admin. The role now comes from app metadata, which only
---    the service role can set, and anything else is a student.
-
 begin;
-
--- ---------------------------------------------------------------
--- 1. Freeze the paper once a student has started
--- ---------------------------------------------------------------
 
 create or replace function public.reject_write_to_started_test()
 returns trigger language plpgsql security definer set search_path = public, pg_temp as $$
@@ -31,8 +14,6 @@ begin
     where q.id = coalesce(new.question_id, old.question_id);
   end if;
 
-  -- Parent already gone: this is a cascade from deleting the question or the
-  -- whole test, not an edit. Let it through.
   if v_test_id is null then
     return coalesce(new, old);
   end if;
@@ -50,7 +31,6 @@ begin
       using errcode = 'check_violation';
   end if;
 
-  -- Anything the admin has already seen, or approved, goes back to draft.
   if v_status in ('pending', 'approved') then
     update public.test set approval_status = 'draft' where id = v_test_id;
   end if;
@@ -75,7 +55,6 @@ begin
       using errcode = 'insufficient_privilege';
   end if;
 
-  -- Handing a test to another owner is not an edit to the paper.
   if (to_jsonb(new) - array['created_by', 'updated_at'])
      is distinct from (to_jsonb(old) - array['created_by', 'updated_at']) then
     if old.approval_status = 'approved' and exists (
@@ -91,14 +70,6 @@ begin
 
   return new;
 end $$;
-
--- ---------------------------------------------------------------
--- 2. A signup cannot choose its own role
--- ---------------------------------------------------------------
--- raw_user_meta_data is whatever the client sent. raw_app_meta_data can only
--- be set through the admin API, which needs the service role key, so that is
--- where the role is read from. Everything else stays as it was in 0003, plus
--- the name columns added in 0014.
 
 create or replace function public.handle_new_user()
 returns trigger language plpgsql security definer set search_path = public, pg_temp as $$

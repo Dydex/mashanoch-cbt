@@ -5,7 +5,6 @@ import type { ActionState } from "./actions";
 import { CLASSES, TERMS, currentSession } from "@/lib/constants";
 import { SCHOOL_TIME_LABEL } from "@/lib/time";
 
-/** An existing test's details, as the edit form needs them. */
 export type TestFormValues = {
   id: string;
   title: string;
@@ -15,7 +14,6 @@ export type TestFormValues = {
   term: string;
   session: string;
   duration_minutes: number;
-  /** datetime-local values, e.g. "2026-09-14T09:00". */
   start: string;
   end: string;
 };
@@ -24,7 +22,6 @@ const initial: ActionState = {};
 const field =
   "mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-sm outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--ring)]";
 
-/** A test's details. Given `test` it edits that test; without it, creates one. */
 export default function TestForm({
   subjects,
   action,

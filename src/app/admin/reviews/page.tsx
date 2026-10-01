@@ -24,8 +24,6 @@ export default async function Approvals() {
   await requireAdmin();
   const admin = createAdminClient();
 
-  // Everything not yet approved, soonest to open first: those are the ones a
-  // slow decision can make late.
   const { data } = await admin
     .from("test")
     .select(
@@ -34,12 +32,10 @@ export default async function Approvals() {
     )
     .neq("approval_status", "approved")
     .order("start_time");
-
   const tests = (data ?? []) as unknown as Row[];
   const pending = tests.filter((t) => t.approval_status === "pending");
   const sentBack = tests.filter((t) => t.approval_status === "changes_requested");
   const drafts = tests.filter((t) => t.approval_status === "draft");
-
   const teacherIds = [...new Set(tests.map((t) => t.created_by))];
   const { data: teachers } = teacherIds.length
     ? await admin.from("profiles").select("id, full_name").in("id", teacherIds)
@@ -54,8 +50,6 @@ export default async function Approvals() {
         .in("test_id", pending.map((t) => t.id))
         .order("created_at", { ascending: false })
     : { data: [] as { test_id: string; body: string | null; created_at: string }[] };
-
-  // Newest first, so the first one seen for each test is its latest.
   const lastSubmission = new Map<string, { body: string | null; created_at: string }>();
   for (const s of submissions ?? [])
     if (!lastSubmission.has(s.test_id)) lastSubmission.set(s.test_id, s);
