@@ -41,6 +41,6 @@ yarn-error.log*
 next-env.d.ts
 .env*
 
-# Assistant instruction files, recreated locally by next dev
+# Editor instruction files, recreated locally by next dev
 AGENTS.md
 CLAUDE.md
