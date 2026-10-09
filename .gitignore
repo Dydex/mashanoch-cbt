@@ -44,3 +44,6 @@ next-env.d.ts
 # Editor instruction files, recreated locally by next dev
 AGENTS.md
 CLAUDE.md
+
+# The template is meant to be committed; real .env files are not.
+!.env.example
