@@ -43,7 +43,9 @@ export default function ForgotPasswordPage() {
   const sent = sentAt !== null;
   const elapsed = sent ? Math.floor((now - sentAt) / 1000) : 0;
   const expiresIn = Math.max(0, RESET_LINK_TTL_SECONDS - elapsed);
-  const resendIn = Math.max(0, RESET_RESEND_COOLDOWN_SECONDS - elapsed);
+  const resendIn = sent
+    ? Math.max(0, RESET_RESEND_COOLDOWN_SECONDS - elapsed)
+    : 0;
   const expired = sent && expiresIn === 0;
 
   return (
