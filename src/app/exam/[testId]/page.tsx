@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireStudent } from "@/lib/auth";
 import { Card } from "@/components/ui";
+import { seededShuffle } from "@/lib/shuffle";
 import ExamRunner from "./exam-runner";
 
 export default async function ExamPage({
@@ -121,7 +122,7 @@ export default async function ExamPage({
         subject: subject ?? "",
         marksPerQuestion: test.marks_per_question,
       }}
-      questions={(questions ?? []).map((q) => ({
+      questions={seededShuffle(questions ?? [], String(submissionId)).map((q) => ({
         id: q.id,
         text: q.question_text,
         imageUrl: q.image_url,
