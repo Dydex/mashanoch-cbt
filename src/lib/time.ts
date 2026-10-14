@@ -77,3 +77,12 @@ export function greeting(): string {
   if (h < 17) return "Good afternoon";
   return "Good evening";
 }
+
+export function reopenChoices(endIso: string) {
+  const inLagos = (msFromNow: number) =>
+    toSchoolInput(new Date(Date.now() + msFromNow).toISOString());
+  return {
+    tomorrowSameTime: `${inLagos(24 * 3_600_000).slice(0, 10)}T${toSchoolInput(endIso).slice(11)}`,
+    inTwoHours: inLagos(2 * 3_600_000),
+  };
+}

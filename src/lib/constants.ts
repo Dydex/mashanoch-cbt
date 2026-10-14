@@ -59,5 +59,7 @@ export const SESSION_PATTERN = "\\d{4}/\\d{4}";
 
 export const REVIEW_NOTE_MAX = 2000;
 
+export const REOPEN_MAX_DAYS = 7;
+
 export const RESET_LINK_TTL_SECONDS = 3600;
 export const RESET_RESEND_COOLDOWN_SECONDS = 60;

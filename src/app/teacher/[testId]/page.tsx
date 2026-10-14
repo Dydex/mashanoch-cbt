@@ -9,13 +9,15 @@ import {
   testStatus,
   type ApprovalStatus,
 } from "@/lib/test-status";
-import { timeFmt, toSchoolInput } from "@/lib/time";
+import { isSenior } from "@/lib/constants";
+import { reopenChoices, timeFmt, toSchoolInput } from "@/lib/time";
 import { updateTest } from "../actions";
 import TestForm from "../test-form";
 import AddQuestionForm from "./add-question-form";
 import DeleteTest from "./delete-test";
 import QuestionCard, { type Option } from "./question-card";
 import ApprovalPanel, { type ReviewEntry } from "./approval-panel";
+import ReopenForm from "./reopen-form";
 import { ReviewForm, SubmitForm } from "./review-forms";
 
 function LockIcon() {
@@ -44,7 +46,7 @@ export default async function AuthorTestPage({
   const { data: test } = await admin
     .from("test")
     .select(
-      "id, title, description, subject_id, class, term, session, duration_minutes, marks_per_question, start_time, end_time, approval_status, created_by, subjects(name)",
+      "id, title, description, subject_id, class, term, session, duration_minutes, marks_per_question, start_time, end_time, approval_status, created_by, subjects(name, department)",
     )
     .eq("id", testId)
     .single();
@@ -75,9 +77,10 @@ export default async function AuthorTestPage({
     admin.from("subjects").select("id, name, department").order("name"),
   ]);
 
-  const subject = Array.isArray(test.subjects)
-    ? test.subjects[0]?.name
-    : (test.subjects as { name: string } | null)?.name;
+  const subjectRow = (
+    Array.isArray(test.subjects) ? test.subjects[0] : test.subjects
+  ) as { name: string; department: string | null } | null | undefined;
+  const subject = subjectRow?.name;
   const list = questions ?? [];
   const sat = submissionCount ?? 0;
   const total = list.length * test.marks_per_question;
@@ -87,6 +90,32 @@ export default async function AuthorTestPage({
   const closed = isClosed(test);
   const locked = isLocked(test, sat);
   const canEdit = !isAdmin && !locked;
+  const canReopen = isAdmin && approval === "approved" && closed;
+
+  let eligible = 0;
+  let unfinished = 0;
+  if (canReopen) {
+    let students = admin
+      .from("profiles")
+      .select("id", { count: "exact", head: true })
+      .eq("role", "student")
+      .eq("class", test.class);
+    if (subjectRow?.department && isSenior(test.class))
+      students = students.eq("department", subjectRow.department);
+    const [{ count: classSize }, { count: inProgress }] = await Promise.all([
+      students,
+      admin
+        .from("submissions")
+        .select("id", { count: "exact", head: true })
+        .eq("test_id", testId)
+        .eq("status", "in_progress"),
+    ]);
+    eligible = classSize ?? 0;
+    unfinished = inProgress ?? 0;
+  }
+  const finished = sat - unfinished;
+  const notStarted = Math.max(0, eligible - sat);
+  const choices = canReopen ? reopenChoices(test.end_time) : null;
 
   const entries: ReviewEntry[] = (reviews ?? []).map((r) => ({
     id: r.id,
@@ -168,6 +197,32 @@ export default async function AuthorTestPage({
           <SubmitForm testId={testId} resubmit={latestSubmission !== ""} />
         )}
       </ApprovalPanel>
+
+      {canReopen && choices && (
+        <section className="mb-5 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow)] sm:p-8">
+          <h2 className="text-base font-semibold">Reopen this test</h2>
+          <p className="mt-1 text-sm text-[var(--text-muted)]">
+            It closed on {timeFmt.format(new Date(test.end_time))}.{" "}
+            {finished} of {eligible} student{eligible === 1 ? "" : "s"} sat it
+            {notStarted > 0
+              ? `, and ${notStarted} ${notStarted === 1 ? "has" : "have"} not started it.`
+              : "."}{" "}
+            Reopening lets anyone who has not sat it do so until the new
+            closing time. Students who already sat it cannot sit it again.
+          </p>
+          {unfinished > 0 && (
+            <p className="mt-2 text-sm text-[var(--warning)]">
+              {unfinished} student{unfinished === 1 ? "" : "s"} started but did
+              not finish. Reopening does not give them extra time.
+            </p>
+          )}
+          <ReopenForm
+            testId={testId}
+            tomorrowSameTime={choices.tomorrowSameTime}
+            inTwoHours={choices.inTwoHours}
+          />
+        </section>
+      )}
 
       {locked && !isAdmin && (
         <div className="mb-5 flex items-start gap-3 rounded-2xl border border-[var(--border)] bg-[var(--warning-soft)] px-4 py-3.5 text-sm text-[var(--warning)]">

@@ -12,11 +12,13 @@ import {
   isDepartment,
   isSenior,
   normalizeAdmissionNo,
+  REOPEN_MAX_DAYS,
   REVIEW_NOTE_MAX,
   type Department,
 } from "@/lib/constants";
 import { normalizeSurname, studentAuthPassword } from "@/lib/student-password";
 import { isLocked } from "@/lib/test-status";
+import { parseSchoolTime, timeFmt } from "@/lib/time";
 
 export type AdminState = {
   error?: string;
@@ -679,5 +681,71 @@ export async function reviewTest(
       new Date(test.start_time).getTime() <= Date.now()
         ? "Approved. It is open to students now."
         : "Approved. Students can sit it once its window opens.",
+  };
+}
+
+export async function reopenTest(
+  _prev: AdminState,
+  formData: FormData,
+): Promise<AdminState> {
+  const me = await requireAdmin();
+
+  const testId = String(formData.get("test_id") ?? "");
+  const reason = String(formData.get("reason") ?? "").trim();
+  if (!testId) return { error: "Missing test." };
+  if (!reason) return { error: "Say why you are reopening it." };
+  if (reason.length > REVIEW_NOTE_MAX)
+    return { error: `Keep the reason under ${REVIEW_NOTE_MAX} characters.` };
+
+  const closesAt = parseSchoolTime(String(formData.get("closes_at") ?? ""));
+  if (!closesAt) return { error: "Choose when it should close." };
+
+  const admin = createAdminClient();
+  const { data: test } = await admin
+    .from("test")
+    .select("approval_status, end_time")
+    .eq("id", testId)
+    .maybeSingle();
+  if (!test) return { error: "That test no longer exists." };
+  if (test.approval_status !== "approved")
+    return { error: "Only an approved test can be reopened." };
+
+  const currentEnd = new Date(test.end_time);
+  if (closesAt <= currentEnd)
+    return {
+      error: `Choose a time after its current closing time, ${timeFmt.format(currentEnd)}.`,
+    };
+  if (closesAt.getTime() <= Date.now())
+    return { error: "Choose a time in the future." };
+  if (closesAt.getTime() > Date.now() + REOPEN_MAX_DAYS * 86_400_000)
+    return {
+      error: `A test can be reopened for at most ${REOPEN_MAX_DAYS} days at a time.`,
+    };
+
+  const { data: moved, error } = await admin
+    .from("test")
+    .update({ end_time: closesAt.toISOString() })
+    .eq("id", testId)
+    .eq("approval_status", "approved")
+    .select("id");
+  if (error) return { error: error.message };
+  if (!moved?.length) return { error: STALE };
+
+  const until = timeFmt.format(closesAt);
+  const { error: logError } = await admin.from("test_reviews").insert({
+    test_id: testId,
+    author_id: me.id,
+    kind: "comment",
+    body: `Reopened until ${until}. Reason: ${reason}`,
+  });
+
+  revalidatePath(`/teacher/${testId}`);
+  revalidatePath("/teacher");
+  revalidatePath("/admin/results");
+  revalidatePath("/exam");
+  return {
+    notice: logError
+      ? `Reopened until ${until}, but the note was not saved: ${logError.message}`
+      : `Reopened until ${until}.`,
   };
 }
