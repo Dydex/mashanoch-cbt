@@ -2,7 +2,12 @@
 
 import { useActionState, useState } from "react";
 import { updateStudent, type AdminState } from "../actions";
-import { CLASSES } from "@/lib/constants";
+import {
+  CLASSES,
+  DEPARTMENTS,
+  DEPARTMENT_LABELS,
+  isSenior,
+} from "@/lib/constants";
 
 const field =
   "min-w-0 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 " +
@@ -14,15 +19,23 @@ export default function EditStudent({
   lastName,
   admissionNo,
   klass,
+  department,
 }: {
   id: string;
   firstName: string;
   lastName: string;
   admissionNo: string;
   klass: string;
+  department: string;
 }) {
   const [editing, setEditing] = useState(false);
-  const [values, setValues] = useState({ firstName, lastName, admissionNo, klass });
+  const [values, setValues] = useState({
+    firstName,
+    lastName,
+    admissionNo,
+    klass,
+    department,
+  });
   const [state, action, pending] = useActionState(
     async (prev: AdminState, formData: FormData) => {
       const result = await updateStudent(prev, formData);
@@ -48,7 +61,7 @@ export default function EditStudent({
         <button
           type="button"
           onClick={() => {
-            setValues({ firstName, lastName, admissionNo, klass });
+            setValues({ firstName, lastName, admissionNo, klass, department });
             setEditing(true);
           }}
           className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium
@@ -80,6 +93,15 @@ export default function EditStudent({
           <option key={c} value={c}>{c}</option>
         ))}
       </select>
+      {isSenior(values.klass) && (
+        <select name="department" value={values.department} onChange={set("department")}
+          aria-label="Department" className={`${field} w-40`}>
+          <option value="">Department: automatic</option>
+          {DEPARTMENTS.map((d) => (
+            <option key={d} value={d}>{DEPARTMENT_LABELS[d]}</option>
+          ))}
+        </select>
+      )}
       <button
         disabled={pending}
         className="rounded-lg bg-[var(--primary)] px-3 py-1.5 text-xs font-semibold

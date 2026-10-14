@@ -1,8 +1,15 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import type { ActionState } from "./actions";
-import { CLASSES, TERMS, currentSession } from "@/lib/constants";
+import {
+  CLASSES,
+  DEPARTMENT_LABELS,
+  TERMS,
+  currentSession,
+  isSenior,
+  type Department,
+} from "@/lib/constants";
 import { SCHOOL_TIME_LABEL } from "@/lib/time";
 
 export type TestFormValues = {
@@ -29,13 +36,18 @@ export default function TestForm({
   submitLabel,
   pendingLabel,
 }: {
-  subjects: { id: string; name: string }[];
+  subjects: { id: string; name: string; department: Department | null }[];
   action: (prev: ActionState, formData: FormData) => Promise<ActionState>;
   test?: TestFormValues;
   submitLabel: string;
   pendingLabel: string;
 }) {
   const [state, formAction, pending] = useActionState(action, initial);
+  const [subjectId, setSubjectId] = useState(test?.subject_id ?? "");
+  const [klass, setKlass] = useState(test?.class ?? "");
+  const subject = subjects.find((s) => s.id === subjectId);
+  const restrictedTo =
+    subject?.department && isSenior(klass) ? subject.department : null;
 
   return (
     <form action={formAction} className="space-y-5">
@@ -59,7 +71,8 @@ export default function TestForm({
         <div>
           <label htmlFor="subject_id" className="text-sm font-medium">Subject</label>
           <select id="subject_id" name="subject_id" required
-            defaultValue={test?.subject_id ?? ""} className={field}>
+            value={subjectId} onChange={(e) => setSubjectId(e.target.value)}
+            className={field}>
             <option value="" disabled>Choose…</option>
             {subjects.map((s) => (
               <option key={s.id} value={s.id}>{s.name}</option>
@@ -70,13 +83,22 @@ export default function TestForm({
         <div>
           <label htmlFor="class" className="text-sm font-medium">Class</label>
           <select id="class" name="class" required
-            defaultValue={test?.class ?? ""} className={field}>
+            value={klass} onChange={(e) => setKlass(e.target.value)}
+            className={field}>
             <option value="" disabled>Choose…</option>
             {CLASSES.map((c) => (
               <option key={c} value={c}>{c}</option>
             ))}
           </select>
         </div>
+
+        {restrictedTo && (
+          <p className="rounded-lg bg-[var(--primary-soft)] px-3 py-2 text-xs text-[var(--primary)] sm:col-span-2">
+            {subject?.name} is a {DEPARTMENT_LABELS[restrictedTo]} subject, so
+            only {DEPARTMENT_LABELS[restrictedTo]} students in {klass} will see
+            this test.
+          </p>
+        )}
 
         <div>
           <label htmlFor="term" className="text-sm font-medium">Term</label>

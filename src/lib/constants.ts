@@ -14,6 +14,35 @@ export const ADMISSION_NO_PATTERN = /^[A-Z0-9][A-Z0-9/.-]{2,29}$/;
 export const CLASSES = ["JSS1", "JSS2", "JSS3", "SS1", "SS2"] as const;
 export type SchoolClass = (typeof CLASSES)[number];
 
+export const DEPARTMENTS = ["science", "art", "commercial"] as const;
+export type Department = (typeof DEPARTMENTS)[number];
+
+export const DEPARTMENT_LABELS: Record<Department, string> = {
+  science: "Science",
+  art: "Art",
+  commercial: "Commercial",
+};
+
+export const isSenior = (klass: string | null | undefined) =>
+  klass === "SS1" || klass === "SS2";
+
+export const isDepartment = (value: string): value is Department =>
+  (DEPARTMENTS as readonly string[]).includes(value);
+
+const PREFIX_DEPARTMENT: Record<string, Department> = {
+  MPSS: "science",
+  MPSH: "art",
+  MPSC: "commercial",
+};
+
+export function defaultDepartment(
+  klass: string,
+  admissionNo: string,
+): Department | null {
+  if (!isSenior(klass)) return null;
+  return PREFIX_DEPARTMENT[normalizeAdmissionNo(admissionNo).slice(0, 4)] ?? null;
+}
+
 export type Role = "student" | "teacher" | "admin";
 
 export const SIDEBAR_COOKIE = "mashanoch_sidebar_collapsed";

@@ -10,7 +10,7 @@ export default async function NewTestPage() {
 
   const { data: subjects } = await supabase
     .from("subjects")
-    .select("id, name")
+    .select("id, name, department")
     .order("name");
 
   return (

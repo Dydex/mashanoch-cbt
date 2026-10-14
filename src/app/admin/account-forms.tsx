@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { inviteStaff, createStudent, type AdminState } from "./actions";
-import { CLASSES } from "@/lib/constants";
+import { CLASSES, DEPARTMENT_LABELS } from "@/lib/constants";
 
 const initial: AdminState = {};
 const field =
@@ -78,7 +78,8 @@ export function AddStudentForm() {
       <h2 className="text-sm font-semibold">Add a student</h2>
       <p className="mt-1 text-xs text-[var(--text-muted)]">
         They sign in with their admission number, and their last name as the
-        password.
+        password. In SS1 and SS2 the admission number sets the department:
+        MPSS Science, MPSH Art, MPSC Commercial.
       </p>
 
       <div className="mt-4 space-y-3">
@@ -115,6 +116,12 @@ export function AddStudentForm() {
         </p>
       )}
 
+      {state.notice && (
+        <p role="status" className="mt-3 rounded-lg bg-[var(--warning-soft)] px-3 py-2 text-xs text-[var(--warning)]">
+          {state.notice}
+        </p>
+      )}
+
       {state.issued && <Slip issued={state.issued} />}
 
       <button type="submit" disabled={pending} className={`mt-4 ${button}`}>
@@ -132,7 +139,10 @@ export function Slip({ issued }: { issued: NonNullable<AdminState["issued"]> }) 
       </p>
       <p className="mt-2 text-sm font-semibold">{issued.fullName}</p>
       {issued.class && (
-        <p className="text-xs text-[var(--text-muted)]">{issued.class}</p>
+        <p className="text-xs text-[var(--text-muted)]">
+          {issued.class}
+          {issued.department ? ` · ${DEPARTMENT_LABELS[issued.department]}` : ""}
+        </p>
       )}
       <dl className="mt-3 grid grid-cols-2 gap-3">
         <div className="min-w-0">

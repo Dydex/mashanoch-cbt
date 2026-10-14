@@ -1,7 +1,13 @@
 import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAdmin } from "@/lib/auth";
-import { CLASSES } from "@/lib/constants";
+import {
+  CLASSES,
+  DEPARTMENTS,
+  DEPARTMENT_LABELS,
+  isSenior,
+  type Department,
+} from "@/lib/constants";
 import PrintButton from "@/components/print-button";
 
 export const metadata = { title: "Student login list" };
@@ -17,7 +23,7 @@ export default async function PrintStudentList({
 
   let query = admin
     .from("profiles")
-    .select("id, username, full_name, first_name, last_name, class")
+    .select("id, username, full_name, first_name, last_name, class, department")
     .eq("role", "student");
   if (klass) query = query.eq("class", klass);
   const { data } = await query;
@@ -30,6 +36,10 @@ export default async function PrintStudentList({
     ),
   ];
   const surname = (s: (typeof students)[number]) => s.last_name ?? s.full_name;
+  const rank = (s: (typeof students)[number]) => {
+    const i = DEPARTMENTS.indexOf(s.department as Department);
+    return i < 0 ? DEPARTMENTS.length : i;
+  };
   const groups = classes
     .map((c) => ({
       klass: c,
@@ -37,6 +47,7 @@ export default async function PrintStudentList({
         .filter((s) => (s.class ?? "") === c)
         .sort(
           (a, b) =>
+            (isSenior(c) ? rank(a) - rank(b) : 0) ||
             surname(a).localeCompare(surname(b)) ||
             (a.first_name ?? "").localeCompare(b.first_name ?? ""),
         ),
@@ -85,7 +96,10 @@ export default async function PrintStudentList({
                     <th className="w-10 py-2 pr-3 font-semibold">#</th>
                     <th className="py-2 pr-3 font-semibold">First name</th>
                     <th className="py-2 pr-3 font-semibold">Surname</th>
-                    <th className="py-2 font-semibold">Admission no.</th>
+                    <th className="py-2 pr-3 font-semibold">Admission no.</th>
+                    {isSenior(g.klass) && (
+                      <th className="py-2 font-semibold">Department</th>
+                    )}
                   </tr>
                 </thead>
                 <tbody>
@@ -96,7 +110,14 @@ export default async function PrintStudentList({
                       <td className="py-2 pr-3 font-semibold">
                         {s.last_name ?? s.full_name}
                       </td>
-                      <td className="py-2 font-mono">{s.username}</td>
+                      <td className="py-2 pr-3 font-mono">{s.username}</td>
+                      {isSenior(g.klass) && (
+                        <td className="py-2">
+                          {s.department
+                            ? DEPARTMENT_LABELS[s.department as Department]
+                            : "—"}
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>

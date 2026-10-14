@@ -22,7 +22,9 @@ export default function ImportStudents() {
       <p className="mt-1 text-xs text-[var(--text-muted)]">
         Upload a spreadsheet saved as CSV. Its first row names the columns —
         first_name, last_name, admission_no, class — in any order. Up to 200
-        rows at a time. Each student&apos;s password is their last name.
+        rows at a time. Each student&apos;s password is their last name, and
+        SS1 and SS2 students are placed in a department by their admission
+        number (MPSS Science, MPSH Art, MPSC Commercial).
       </p>
 
       <details className="mt-3">
@@ -59,6 +61,13 @@ export default function ImportStudents() {
             <ul className="mt-2 max-h-40 space-y-1 overflow-y-auto text-[11px] text-[var(--danger)]">
               {state.imported.problems.map((p) => (
                 <li key={p}>{p}</li>
+              ))}
+            </ul>
+          )}
+          {state.imported.warnings.length > 0 && (
+            <ul className="mt-2 max-h-40 space-y-1 overflow-y-auto text-[11px] text-[var(--warning)]">
+              {state.imported.warnings.map((w) => (
+                <li key={w}>{w}</li>
               ))}
             </ul>
           )}

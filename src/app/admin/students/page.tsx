@@ -2,7 +2,12 @@ import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAdmin } from "@/lib/auth";
 import { Card } from "@/components/ui";
-import { CLASSES } from "@/lib/constants";
+import {
+  CLASSES,
+  DEPARTMENTS,
+  DEPARTMENT_LABELS,
+  isSenior,
+} from "@/lib/constants";
 import EditStudent from "./edit-student";
 import ImportStudents from "./import-students";
 import PromoteClass from "./promote-class";
@@ -12,6 +17,62 @@ import { AddStudentForm } from "../account-forms";
 const printLink =
   "rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-medium " +
   "text-[var(--text-muted)] transition hover:border-[var(--primary)] hover:text-[var(--text)]";
+
+type Student = {
+  id: string;
+  username: string;
+  full_name: string;
+  first_name: string | null;
+  last_name: string | null;
+  class: string | null;
+  department: string | null;
+};
+
+function sectionsOf(klass: string, members: Student[]) {
+  if (!isSenior(klass))
+    return [{ key: "all", title: null, missing: false, members }];
+  return [
+    ...DEPARTMENTS.map((d) => ({
+      key: d,
+      title: DEPARTMENT_LABELS[d],
+      missing: false,
+      members: members.filter((m) => m.department === d),
+    })),
+    {
+      key: "none",
+      title: "No department yet",
+      missing: true,
+      members: members.filter((m) => !m.department),
+    },
+  ].filter((s) => s.members.length > 0);
+}
+
+function StudentRow({ student, klass }: { student: Student; klass: string }) {
+  return (
+    <li
+      className="flex flex-wrap items-center justify-between gap-4 rounded-xl border
+                 border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow)]"
+    >
+      <div className="min-w-0">
+        <p className="truncate text-sm font-semibold">{student.full_name}</p>
+        <p className="truncate text-xs text-[var(--text-muted)]">
+          Admission no. <span className="font-mono">{student.username}</span>
+        </p>
+      </div>
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <EditStudent
+          id={student.id}
+          firstName={student.first_name ?? ""}
+          lastName={student.last_name ?? ""}
+          admissionNo={student.username}
+          klass={student.class ?? klass}
+          department={student.department ?? ""}
+        />
+        <RemoveStudent id={student.id} name={student.full_name} />
+      </div>
+    </li>
+  );
+}
 
 export default async function StudentsPage({
   searchParams,
@@ -26,13 +87,13 @@ export default async function StudentsPage({
 
   let query = admin
     .from("profiles")
-    .select("id, username, full_name, first_name, last_name, class")
+    .select("id, username, full_name, first_name, last_name, class, department")
     .eq("role", "student");
   if (klass) query = query.eq("class", klass);
   if (safeTerm)
     query = query.or(`full_name.ilike.%${safeTerm}%,username.ilike.%${safeTerm}%`);
   const { data } = await query.order("class").order("full_name");
-  const students = data ?? [];
+  const students = (data ?? []) as Student[];
 
   const byClass = CLASSES.map((c, i) => ({
     name: c,
@@ -129,32 +190,37 @@ export default async function StudentsPage({
                   </div>
                 </div>
 
-                <ul className="space-y-2">
-                  {group.members.map((p) => (
-                    <li
-                      key={p.id}
-                      className="flex flex-wrap items-center justify-between gap-4 rounded-xl border
-                                 border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow)]"
-                    >
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold">{p.full_name}</p>
-                        <p className="truncate text-xs text-[var(--text-muted)]">
-                          Admission no. <span className="font-mono">{p.username}</span>
-                        </p>
-                      </div>
-                      <div className="flex flex-wrap items-center justify-end gap-2">
-                        <EditStudent
-                          id={p.id}
-                          firstName={p.first_name ?? ""}
-                          lastName={p.last_name ?? ""}
-                          admissionNo={p.username}
-                          klass={p.class ?? group.name}
-                        />
-                        <RemoveStudent id={p.id} name={p.full_name} />
-                      </div>
-                    </li>
+                <div className="space-y-5">
+                  {sectionsOf(group.name, group.members).map((section) => (
+                    <div key={section.key}>
+                      {section.title && (
+                        <div className="mb-2 flex flex-wrap items-baseline gap-x-3">
+                          <h3
+                            className={`text-sm font-semibold ${
+                              section.missing ? "text-[var(--warning)]" : ""
+                            }`}
+                          >
+                            {section.title}{" "}
+                            <span className="font-normal text-[var(--text-subtle)]">
+                              {section.members.length}
+                            </span>
+                          </h3>
+                          {section.missing && (
+                            <p className="text-xs text-[var(--text-muted)]">
+                              These students only see general subjects. Set a
+                              department with Edit.
+                            </p>
+                          )}
+                        </div>
+                      )}
+                      <ul className="space-y-2">
+                        {section.members.map((p) => (
+                          <StudentRow key={p.id} student={p} klass={group.name} />
+                        ))}
+                      </ul>
+                    </div>
                   ))}
-                </ul>
+                </div>
               </section>
             ),
           )}

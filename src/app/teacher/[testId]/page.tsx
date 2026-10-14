@@ -72,7 +72,7 @@ export default async function AuthorTestPage({
       .select("id, kind, body, created_at, author:profiles(full_name)")
       .eq("test_id", testId)
       .order("created_at"),
-    admin.from("subjects").select("id, name").order("name"),
+    admin.from("subjects").select("id, name, department").order("name"),
   ]);
 
   const subject = Array.isArray(test.subjects)
@@ -219,7 +219,11 @@ export default async function AuthorTestPage({
       )}
 
       <section>
-        <h2 className="mb-3 text-base font-semibold">Questions</h2>
+        <h2 className="text-base font-semibold">Questions</h2>
+        <p className="mb-3 mt-1 text-sm text-[var(--text-muted)]">
+          Each student sees these in a different order, so a question should
+          not refer to another by its number.
+        </p>
 
         {list.length === 0 ? (
           <Card className="px-6 py-10 text-center">

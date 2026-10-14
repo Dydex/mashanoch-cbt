@@ -8,8 +8,12 @@ import {
   ADMISSION_NO_PATTERN,
   authEmailFor,
   CLASSES,
+  defaultDepartment,
+  isDepartment,
+  isSenior,
   normalizeAdmissionNo,
   REVIEW_NOTE_MAX,
+  type Department,
 } from "@/lib/constants";
 import { normalizeSurname, studentAuthPassword } from "@/lib/student-password";
 import { isLocked } from "@/lib/test-status";
@@ -18,7 +22,7 @@ export type AdminState = {
   error?: string;
   notice?: string;
   issued?: Slip;
-  imported?: { created: number; problems: string[] };
+  imported?: { created: number; problems: string[]; warnings: string[] };
 };
 
 export type Slip = {
@@ -26,6 +30,7 @@ export type Slip = {
   username: string;
   password: string;
   class: string;
+  department: Department | null;
 };
 
 export async function inviteStaff(
@@ -108,6 +113,7 @@ async function createStudentAccount(details: {
   last: string;
   admissionNo: string;
   klass: string;
+  department: Department | null;
 }): Promise<{ error: string } | { id: string }> {
   const id = randomUUID();
   const { error } = await createAdminClient().auth.admin.createUser({
@@ -121,6 +127,7 @@ async function createStudentAccount(details: {
       full_name: `${details.first} ${details.last}`,
       role: "student",
       class: details.klass,
+      department: details.department ?? "",
       first_name: details.first,
       last_name: details.last,
     },
@@ -141,11 +148,13 @@ export async function createStudent(
   const claimed = await claimAdmissionNo(formData);
   if ("error" in claimed) return claimed;
 
+  const department = defaultDepartment(klass, claimed.admissionNo);
   const made = await createStudentAccount({
     first: names.first,
     last: names.last,
     admissionNo: claimed.admissionNo,
     klass,
+    department,
   });
   if ("error" in made) return { error: made.error };
   revalidatePath("/admin/students");
@@ -155,7 +164,12 @@ export async function createStudent(
       username: claimed.admissionNo,
       password: names.last,
       class: klass,
+      department,
     },
+    ...(isSenior(klass) &&
+      !department && {
+        notice: `${claimed.admissionNo} does not start with MPSS, MPSH or MPSC, so no department was set. Choose one with Edit.`,
+      }),
   };
 }
 
@@ -227,7 +241,15 @@ export async function importStudents(
   const { data: existing } = await admin.from("profiles").select("username");
   const taken = new Set((existing ?? []).map((p) => p.username));
   const problems: string[] = [];
-  const ready: { row: number; first: string; last: string; admissionNo: string; klass: string }[] = [];
+  const warnings: string[] = [];
+  const ready: {
+    row: number;
+    first: string;
+    last: string;
+    admissionNo: string;
+    klass: string;
+    department: Department | null;
+  }[] = [];
 
   rows.forEach((line, n) => {
     const cells = splitCsvLine(line);
@@ -259,7 +281,12 @@ export async function importStudents(
       return;
     }
     taken.add(admissionNo);
-    ready.push({ row: n + 2, first, last, admissionNo, klass });
+    const department = defaultDepartment(klass, admissionNo);
+    if (isSenior(klass) && !department)
+      warnings.push(
+        `${where}: ${admissionNo} is in ${klass} but does not start with MPSS, MPSH or MPSC, so no department was set.`,
+      );
+    ready.push({ row: n + 2, first, last, admissionNo, klass, department });
   });
   let created = 0;
   for (let i = 0; i < ready.length; i += 5) {
@@ -278,7 +305,7 @@ export async function importStudents(
 
   revalidatePath("/admin/students");
   return {
-    imported: { created, problems },
+    imported: { created, problems, warnings },
     notice: `${created} student${created === 1 ? "" : "s"} added${
       problems.length ? `, ${problems.length} row${problems.length === 1 ? "" : "s"} skipped` : ""
     }.`,
@@ -295,7 +322,7 @@ export async function updateStudent(
   const admin = createAdminClient();
   const { data: student } = await admin
     .from("profiles")
-    .select("role, last_name")
+    .select("role, last_name, username, department")
     .eq("id", profileId)
     .maybeSingle();
 
@@ -308,6 +335,18 @@ export async function updateStudent(
     return { error: "Choose a class." };
   const claimed = await claimAdmissionNo(formData, profileId);
   if ("error" in claimed) return claimed;
+
+  const chosen = String(formData.get("department") ?? "");
+  if (chosen && !isDepartment(chosen))
+    return { error: "Choose Science, Art or Commercial." };
+  const renumbered = claimed.admissionNo !== student.username;
+  const keepChosen =
+    chosen && !(chosen === (student.department ?? "") && renumbered);
+  const department: Department | null = !isSenior(klass)
+    ? null
+    : keepChosen
+      ? (chosen as Department)
+      : defaultDepartment(klass, claimed.admissionNo);
 
   const surnameChanged =
     normalizeSurname(names.last) !== normalizeSurname(student.last_name ?? "");
@@ -326,6 +365,7 @@ export async function updateStudent(
       full_name: `${names.first} ${names.last}`,
       username: claimed.admissionNo,
       class: klass,
+      department,
     })
     .eq("id", profileId);
   if (error) return { error: error.message };
@@ -397,16 +437,25 @@ export async function promoteClass(
   if (error) return { error: error.message };
   revalidatePath("/admin/students");
   const count = moved?.length ?? 0;
+  const departmentNote =
+    isSenior(next) && !isSenior(klass)
+      ? " Give each a department with Edit, or a new admission number starting MPSS, MPSH or MPSC."
+      : "";
   return {
-    notice: `${count} student${count === 1 ? "" : "s"} moved from ${klass} to ${next}.`,
+    notice: `${count} student${count === 1 ? "" : "s"} moved from ${klass} to ${next}.${departmentNote}`,
   };
 }
 
-function readSubjectName(formData: FormData): { error: string } | { name: string } {
+function readSubject(
+  formData: FormData,
+): { error: string } | { name: string; department: Department | null } {
   const name = String(formData.get("name") ?? "").trim().replace(/\s+/g, " ");
+  const department = String(formData.get("department") ?? "");
   if (name.length < 2) return { error: "Enter the subject's name." };
   if (name.length > 60) return { error: "Keep the name under 60 characters." };
-  return { name };
+  if (department && !isDepartment(department))
+    return { error: "Choose Science, Art, Commercial or General." };
+  return { name, department: (department || null) as Department | null };
 }
 
 async function subjectNameTaken(name: string, except?: string) {
@@ -423,40 +472,40 @@ export async function createSubject(
   formData: FormData,
 ): Promise<AdminState> {
   await requireAdmin();
-  const read = readSubjectName(formData);
+  const read = readSubject(formData);
   if ("error" in read) return read;
   if (await subjectNameTaken(read.name))
     return { error: `${read.name} is already on the list.` };
 
   const { error } = await createAdminClient()
     .from("subjects")
-    .insert({ name: read.name });
+    .insert({ name: read.name, department: read.department });
   if (error) return { error: error.message };
   revalidatePath("/admin/subjects");
   revalidatePath("/teacher/new");
   return { notice: `${read.name} added.` };
 }
 
-export async function renameSubject(
+export async function updateSubject(
   _prev: AdminState,
   formData: FormData,
 ): Promise<AdminState> {
   await requireAdmin();
   const id = String(formData.get("subject_id") ?? "");
   if (!id) return { error: "Missing subject." };
-  const read = readSubjectName(formData);
+  const read = readSubject(formData);
   if ("error" in read) return read;
   if (await subjectNameTaken(read.name, id))
     return { error: `${read.name} is already on the list.` };
 
   const { error } = await createAdminClient()
     .from("subjects")
-    .update({ name: read.name })
+    .update({ name: read.name, department: read.department })
     .eq("id", id);
   if (error) return { error: error.message };
   revalidatePath("/admin/subjects");
   revalidatePath("/teacher");
-  return { notice: `Renamed to ${read.name}.` };
+  return { notice: `${read.name} saved.` };
 }
 
 export async function deleteSubject(
