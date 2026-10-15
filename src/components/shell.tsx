@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { logout } from "@/app/login/actions";
 import { Avatar } from "@/components/ui";
 import { MobileNavLink } from "@/components/nav-link";
+import { MobileMenu } from "@/components/mobile-menu";
 import { Sidebar } from "@/components/sidebar";
 import { BrandMark } from "@/components/brand-mark";
 import { SIDEBAR_COOKIE } from "@/lib/constants";
@@ -29,6 +30,7 @@ export async function AppShell({
 }) {
   const collapsed =
     (await cookies()).get(SIDEBAR_COOKIE)?.value === "1";
+  const hasMenu = !!sections?.length;
 
   return (
     <div className="min-h-screen bg-[var(--bg)] lg:flex">
@@ -43,10 +45,15 @@ export async function AppShell({
         
         <header className="sticky top-0 z-20 border-b border-[var(--border)] bg-[var(--surface)]/85 backdrop-blur-xl print:hidden">
           <div className="flex h-[68px] items-center justify-between gap-4 px-5 lg:px-8">
-            <Link href="/" className="flex items-center gap-2.5 lg:hidden">
-              <BrandMark size="sm" />
-              <span className="font-serif text-sm font-semibold">Mashanoch</span>
-            </Link>
+            <div className="flex items-center gap-3 lg:hidden">
+              {hasMenu && (
+                <MobileMenu nav={nav} sections={sections} logout={logout} />
+              )}
+              <Link href="/" className="flex items-center gap-2.5">
+                <BrandMark size="sm" />
+                <span className="font-serif text-sm font-semibold">Mashanoch</span>
+              </Link>
+            </div>
 
             <div className="hidden items-center gap-3 lg:flex">
               <span className="h-5 w-0.5 rounded-full bg-[var(--primary)]" />
@@ -73,18 +80,24 @@ export async function AppShell({
           </div>
         </header>
 
-        <main className="flex-1 px-5 py-7 pb-24 lg:px-8 lg:pb-10">{children}</main>
+        <main
+          className={`flex-1 px-5 py-7 lg:px-8 lg:pb-10 ${hasMenu ? "pb-10" : "pb-24"}`}
+        >
+          {children}
+        </main>
 
-        <nav className="fixed inset-x-3 bottom-3 z-30 flex items-center justify-around rounded-2xl border border-white/10 bg-[var(--ink)]/95 p-2 shadow-2xl backdrop-blur-xl lg:hidden print:hidden">
-          {nav.map((item) => (
-            <MobileNavLink key={item.href} {...item} />
-          ))}
-          <form action={logout}>
-            <button className="flex min-w-18 flex-col items-center gap-1 rounded-xl px-3 py-2 text-[10px] font-medium text-white/55">
-              <IconLogout /><span>Log out</span>
-            </button>
-          </form>
-        </nav>
+        {!hasMenu && (
+          <nav className="fixed inset-x-3 bottom-3 z-30 flex items-center justify-around rounded-2xl border border-white/10 bg-[var(--ink)]/95 p-2 shadow-2xl backdrop-blur-xl lg:hidden print:hidden">
+            {nav.map((item) => (
+              <MobileNavLink key={item.href} {...item} />
+            ))}
+            <form action={logout}>
+              <button className="flex min-w-18 flex-col items-center gap-1 rounded-xl px-3 py-2 text-[10px] font-medium text-white/55">
+                <IconLogout /><span>Log out</span>
+              </button>
+            </form>
+          </nav>
+        )}
       </div>
     </div>
   );
